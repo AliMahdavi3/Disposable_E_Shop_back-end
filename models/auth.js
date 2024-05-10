@@ -11,19 +11,33 @@ const userSchema = new Schema({
     email: {
         type: String,
         required: true,
-        unique : true,
-        trim: true,
+        unique: true,
     },
     phone: {
         type: String,
         required: true,
         unique: true,
+    },
+    city: {
+        type: String,
+        required: false,
+    },
+    address: {
+        type: String,
+        required: false,
+    },
+    zipCode: {
+        type: String,
+        required: false,
         trim: true,
+    },
+    birthDate: {
+        type: String,
+        required: false
     },
     password: {
         type: String,
         required: true,
-        trim: true,
     },
     status: {
         type: String,

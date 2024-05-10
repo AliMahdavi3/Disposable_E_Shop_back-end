@@ -5,7 +5,6 @@ const router = express.Router();
 const authenticate = require('../middlewares/authentication');
 
 
-
 router.post('/register', [
     body('name').trim().isLength({min: 5}).notEmpty(),
     body('email').isEmail(),
@@ -20,7 +19,7 @@ router.post('/login', [
 
 router.get('/user', authenticate, authController.getUser);
 router.put('/user/:userId', authenticate, authController.editUser);
-router.post('/changePassword/:userId', authenticate, authController.changePassword)
+router.put('/changePassword/:userId', authenticate, authController.changePassword)
 
 
 module.exports = router;

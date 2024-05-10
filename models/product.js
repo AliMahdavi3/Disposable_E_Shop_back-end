@@ -38,6 +38,14 @@ const productSchema = new Schema({
         type: String,
         required: true,
     },
+    color: {
+        type: String,
+        required: true,
+    },
+    tag: {
+        type: String,
+        required: true,
+    },
     views: {
         type: Number,
         default: 0

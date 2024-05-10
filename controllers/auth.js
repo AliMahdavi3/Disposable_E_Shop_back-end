@@ -16,7 +16,7 @@ exports.register = async (req, res, next) => {
             });
         }
 
-        const { email, phone, name, password } = req.body;
+        const { email, phone, name, password, city, address, zipCode, birthDate } = req.body;
 
         const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -34,10 +34,16 @@ exports.register = async (req, res, next) => {
             });
         }
 
+     
+
         const user = new User({
             email,
             name,
             phone,
+            birthDate,
+            city,
+            address,
+            zipCode,
             password: hashedPassword,
         });
         const result = await user.save();
@@ -111,7 +117,14 @@ exports.login = async (req, res, next) => {
 exports.getUser = async (req, res, next) => {
     try {
 
-        const user = await User.findById(req.user.userId).select('-password');
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            const error = new Error('Validation Faild!, Your Entered Data is Invalid');
+            error.statusCode = 422;
+            throw error;
+        }
+        const userId = req.user.userId;
+        const user = await User.findById(userId).select('-password');
 
         if (!user) {
             const error = new Error('User not found!');
@@ -134,7 +147,6 @@ exports.getUser = async (req, res, next) => {
 exports.editUser = async (req, res, next) => {
 
     try {
-
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             const error = new Error('Validation Faild!, Your Entered Data is Invalid');
@@ -143,9 +155,7 @@ exports.editUser = async (req, res, next) => {
         }
 
         const userId = req.params.userId;
-        const name = req.body.name;
-        const email = req.body.email;
-        const phone = req.body.phone;
+        const { name, email, phone, city, address, zipCode} = req.body;
 
         const user = await User.findById(userId);
 
@@ -159,6 +169,9 @@ exports.editUser = async (req, res, next) => {
         user.name = name;
         user.email = email;
         user.phone = phone;
+        user.city = city;
+        user.address = address;
+        user.zipCode = zipCode;
 
         await user.save();
 
@@ -190,7 +203,6 @@ exports.changePassword = async (req, res, next) => {
         const { oldPassword, newPassword } = req.body;
 
         const userId = req.params.userId;
-
         const user = await User.findById(userId);
         if (!user) {
             const error = new Error('User not found!')

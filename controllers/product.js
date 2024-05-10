@@ -37,7 +37,7 @@ exports.createProduct = async (req, res, next) => {
             throw error;
         }
 
-        const { title, content, price, productCode, weight, size, available, category } = req.body
+        const { title, content, price, productCode, weight, size, available, category, color, tag } = req.body
 
         const product = new Product({
             title: title,
@@ -48,6 +48,8 @@ exports.createProduct = async (req, res, next) => {
             size: size,
             available: available,
             category: category,
+            color: color,
+            tag: tag,
             imageUrl: req.files.map(file => file.path.replace(/\\/g, '/'))
         });
         const productResults = await product.save();

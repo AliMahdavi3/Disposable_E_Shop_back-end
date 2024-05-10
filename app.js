@@ -7,6 +7,7 @@ const articleRoutes = require('./routes/article');
 const questionRoutes = require('./routes/questions');
 const bannerRoutes = require('./routes/banner');
 const authRoutes = require('./routes/auth');
+const commentRoutes = require('./routes/comment');
 
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -17,7 +18,7 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 app.use('/images', express.static(path.join(__dirname, 'images')));
-app.use('/api', mainSliderRoutes, productRoutes, articleRoutes, questionRoutes, bannerRoutes);
+app.use('/api', mainSliderRoutes, productRoutes, articleRoutes, questionRoutes, bannerRoutes, commentRoutes);
 app.use('/auth', authRoutes);
 
 app.use((error, req, res, next) => {
