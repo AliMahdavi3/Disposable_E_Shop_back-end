@@ -15,7 +15,7 @@ exports.createComment = async (req, res, next) => {
 
         const { productId } = req.params;
         const { content, rating } = req.body;
-        const userId = req.user.userId;
+        const userId = req.user;
 
         const comment = await Comment.create({
             content,

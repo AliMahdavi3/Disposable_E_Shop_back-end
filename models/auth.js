@@ -43,11 +43,70 @@ const userSchema = new Schema({
         type: String,
         default: 'New User!'
     },
-
+    cart: {
+        items: [{
+            productId: {
+                type: Schema.Types.ObjectId,
+                ref: 'Product',
+                required: true,
+            },
+            quantity: {
+                type: Number,
+                required: true
+            }
+        }]
+    },
 }, {
     timestamps: true
 });
 
+userSchema.methods.addToCart = function (product, quantity) {
+    const cartProductIndex = this.cart.items.findIndex(cp => {
+        return cp.productId.toString() === product._id.toString();
+    });
 
+    const updatedCartItems = [...this.cart.items];
+
+    if (cartProductIndex >= 0) {
+        updatedCartItems[cartProductIndex].quantity += quantity;
+    } else {
+        updatedCartItems.push({
+            productId: product._id,
+            quantity: quantity
+        });
+    }
+
+    const updatedCart = {
+        items: updatedCartItems
+    };
+
+    this.cart = updatedCart;
+    return this.save();
+};
+
+userSchema.methods.removeFromCart = function (productId) {
+    const updatedCartItems = this.cart.items.filter((item) => {
+        return item.productId.toString() !== productId.toString();
+    });
+    this.cart.items = updatedCartItems;
+    return this.save();
+};
+
+userSchema.methods.updateCartProductQuantity = function (productId, newQuantity) {
+
+    const cartProductIndex = this.cart.items.findIndex(cp => {
+        return cp.productId.toString() === productId.toString();
+    });
+
+    if(cartProductIndex === -1) {
+        throw new Error('Product not found in cart!');
+    };
+
+    const updatedCartItems = [...this.cart.items];
+    updatedCartItems[cartProductIndex].quantity = newQuantity;
+
+    this.cart.items = updatedCartItems;
+    return this.save();
+};
 
 module.exports = mongoose.model('User', userSchema);

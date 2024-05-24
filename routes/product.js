@@ -1,5 +1,6 @@
 const express = require('express');
 const productsControllers = require('../controllers/product');
+const authenticate = require('../middlewares/authentication');
 const multer = require('multer');
 const router = express.Router();
 
@@ -25,12 +26,8 @@ const upload = multer({
     fileFilter: fileFilter,
 });
 
-
-
 router.get('/products', productsControllers.getProducts);
 router.post('/product', upload.array('image', 4), productsControllers.createProduct);
 router.get('/products/:productId', productsControllers.getSingleProduct);
-
-
 
 module.exports = router;

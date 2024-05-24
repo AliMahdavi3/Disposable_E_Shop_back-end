@@ -20,7 +20,6 @@ exports.getProducts = async (req, res, next) => {
     }
 }
 
-
 exports.createProduct = async (req, res, next) => {
     try {
         const errors = validationResult(req);
@@ -85,8 +84,8 @@ exports.getSingleProduct = async (req, res, next) => {
         const productId = req.params.productId;
         const product = await Product.findByIdAndUpdate(
             productId,
-            { $inc : { views: 1 }},
-            { new : true },
+            { $inc: { views: 1 } },
+            { new: true },
         );
 
         if (!product) {
@@ -109,3 +108,4 @@ exports.getSingleProduct = async (req, res, next) => {
 
     }
 }
+

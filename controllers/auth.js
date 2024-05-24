@@ -123,7 +123,8 @@ exports.getUser = async (req, res, next) => {
             error.statusCode = 422;
             throw error;
         }
-        const userId = req.user.userId;
+
+        const userId = req.user;
         const user = await User.findById(userId).select('-password');
 
         if (!user) {
