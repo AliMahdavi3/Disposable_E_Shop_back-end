@@ -8,6 +8,8 @@ const questionRoutes = require('./routes/questions');
 const bannerRoutes = require('./routes/banner');
 const authRoutes = require('./routes/auth');
 const commentRoutes = require('./routes/comment');
+const discountRoutes = require('./routes/discount');
+const orderRoutes = require('./routes/order');
 const searchRoutes = require('./routes/search');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -25,6 +27,8 @@ app.use('/api',
     questionRoutes,
     bannerRoutes,
     searchRoutes,
+    discountRoutes,
+    orderRoutes,
     commentRoutes,
     cartRoutes);
 app.use('/auth', authRoutes);
