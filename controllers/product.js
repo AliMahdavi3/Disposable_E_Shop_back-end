@@ -36,7 +36,7 @@ exports.createProduct = async (req, res, next) => {
             throw error;
         }
 
-        const { title, content, price, productCode, weight, size, available, category, color, tag } = req.body
+        const { title, content, price, productCode, weight, size, available, category, color, tag, userId } = req.body
 
         const product = new Product({
             title: title,
@@ -49,7 +49,8 @@ exports.createProduct = async (req, res, next) => {
             category: category,
             color: color,
             tag: tag,
-            imageUrl: req.files.map(file => file.path.replace(/\\/g, '/'))
+            imageUrl: req.files.map(file => file.path.replace(/\\/g, '/')),
+            userId: req.user._id,
         });
         const productResults = await product.save();
 
@@ -109,3 +110,63 @@ exports.getSingleProduct = async (req, res, next) => {
     }
 }
 
+exports.getTopSellingProducts = async (req, res, next) => {
+    try {
+        const topProducts = await Product.find().sort({ salesCount: -1 }).limit(6);
+        res.status(200).json({
+            message: 'Top selling products fetched successfully!',
+            products: topProducts
+        });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
+exports.getDisposableProducts = async (req, res, next) => {
+    try {
+        const disposableProducts = await Product.find({ category: 'ظروف یکبارمصرف' });
+        res.status(200).json({
+            message: 'Disposable Products fetched successfully!',
+            products: disposableProducts,
+        });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
+exports.getBirthDayProducts = async (req, res, next) => {
+    try {
+        const birthDayProducts = await Product.find({ category: 'تم تولدی' });
+        res.status(200).json({
+            message: 'Birth Day Products fetched successfully!',
+            products: birthDayProducts,
+        });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
+exports.getNewestProducts = async (req, res, next) => {
+    try {
+
+        const newestProducts = await Product.find().sort({ createdAt: -1 }).limit(7);
+        res.status(200).json({
+            message: 'Newest Products fetched succesfully!',
+            products: newestProducts
+        });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}

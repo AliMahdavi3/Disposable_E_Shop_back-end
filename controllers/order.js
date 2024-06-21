@@ -1,5 +1,8 @@
 const Order = require('../models/order');
+const Product = require('../models/product');
 const { calculateDiscountAmount, validateDiscountCode } = require('../services/discountService');
+const ZarinpalCheckout = require('zarinpal-checkout');
+let zarinpal = ZarinpalCheckout.create('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', true);
 
 exports.getOrders = async (req, res, next) => {
     try {
@@ -64,6 +67,14 @@ exports.postOrder = async (req, res, next) => {
 
         await order.save();
 
+        // Increment sales count for each product
+        for (const item of cartItems) {
+            await Product.updateOne(
+                { _id: item.product._id },
+                { $inc: { salesCount: item.quantity } }
+            );
+        }
+
         user.cart.items = [];
         await user.save();
 
@@ -103,3 +114,77 @@ exports.getSingleOrder = async (req, res, next) => {
         next(error);
     }
 }
+
+exports.getPayment = async (req, res, next) => {
+    try {
+        const orderId = req.params.orderId;
+        if (!orderId) {
+            const error = new Error('Order ID is required!');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            const error = new Error('Order not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        if (order.user.userId.toString() !== req.user._id.toString()) {
+            const error = new Error('Unauthorized user to make payment for this order!');
+            error.statusCode = 403;
+            throw error;
+        };
+
+        const amount = order.total;
+        const callbackURL = `http://localhost:3000/checkPayment/${orderId}`;
+        const description = 'تست اتصال به درگاه پرداخت';
+        // const description = `Payment for Order ID: ${orderId}`;
+
+        const response = await zarinpal.PaymentRequest({
+            Amount: amount,
+            CallbackURL: callbackURL,
+            Description: description,
+            Email: req.user.email,
+            Mobile: req.user.phone,
+        });
+
+        if (response.status === 100) {
+            console.log(response);
+            res.json({
+                paymentUrl: response.url
+            });
+        } else {
+            res.status(500).json({ message: 'Failed to create payment request.' });
+        }
+
+    } catch (error) {
+        console.error(error);
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
+exports.checkPayment = async (req, res, next) => {
+    const authority = req.query.Authority;
+    const status = req.query.Status;
+    const orderId = req.params.orderId;
+
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+        return res.status(404).json({ message: 'Order not found!' });
+    }
+
+    if (status == 'OK') {
+        zarinpal.PaymentVerification({
+            Amount: order.total,
+            Authority: authority
+        }).then((response) => {
+            console.log(response)
+        });
+    }
+};

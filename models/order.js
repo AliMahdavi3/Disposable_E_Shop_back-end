@@ -40,6 +40,11 @@ const orderSchema = new Schema({
         type: String,
         required: false
     },
+    isPaid: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
 }, {
     timestamps: true
 });
