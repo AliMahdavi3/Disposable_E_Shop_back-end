@@ -1,24 +1,8 @@
 const express = require('express');
-const Product = require('../models/product');
 const router = express.Router();
+const searchController = require('../controllers/search');
 
-
-router.get('/search', async (req, res, next) => {
-    try {
-        const searchTerm = req.query.term;
-        const products = await Product.find({ $text: { $search: searchTerm } });
-
-        const results = { products };
-
-        res.json(results);
-
-    } catch (error) {
-        if(!error.statusCode) {
-            error.statusCode = 500;
-        }
-        next(error)
-    }
-});
+router.get('/search', searchController.searchItems);
 
 
 module.exports = router;

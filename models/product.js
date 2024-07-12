@@ -63,4 +63,6 @@ const productSchema = new Schema({
     timestamps: true
 });
 
+productSchema.index({ title: 'text', content: 'text', tag: 'text' });
+
 module.exports = mongoose.model('Product', productSchema);

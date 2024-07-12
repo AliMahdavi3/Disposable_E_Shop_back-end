@@ -28,10 +28,13 @@ const upload = multer({
 
 router.get('/products', productsControllers.getProducts);
 router.post('/product', authenticate, upload.array('image', 4), productsControllers.createProduct);
+router.get('/products/categories', productsControllers.getCategories);
 router.get('/products/:productId', productsControllers.getSingleProduct);
 router.get('/top-selling-products', productsControllers.getTopSellingProducts);
 router.get('/disposable-products', productsControllers.getDisposableProducts);
 router.get('/birth-day-products', productsControllers.getBirthDayProducts);
 router.get('/newest-products', productsControllers.getNewestProducts);
+
+
 
 module.exports = router;

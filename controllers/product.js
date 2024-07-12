@@ -158,10 +158,25 @@ exports.getBirthDayProducts = async (req, res, next) => {
 exports.getNewestProducts = async (req, res, next) => {
     try {
 
-        const newestProducts = await Product.find().sort({ createdAt: -1 }).limit(7);
+        const newestProducts = await Product.find().sort({ createdAt: -1 }).limit(6);
         res.status(200).json({
             message: 'Newest Products fetched succesfully!',
             products: newestProducts
+        });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
+exports.getCategories = async (req, res, next) => {
+    try {
+        const categories = await Product.distinct('category');
+        res.status(200).json({
+            message: 'Categories fetched successfully!',
+            categories: categories
         });
     } catch (error) {
         if (!error.statusCode) {

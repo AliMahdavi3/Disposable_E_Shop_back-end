@@ -1,5 +1,5 @@
 const { validationResult } = require('express-validator');
-const Comment = require('../models/comments');
+const ArticleComment = require('../models/articleComment');
 
 exports.createComment = async (req, res, next) => {
 
@@ -13,21 +13,21 @@ exports.createComment = async (req, res, next) => {
             throw error;
         }
 
-        const { productId } = req.params;
+        const { articleId } = req.params;
         const { content, rating } = req.body;
         const userId = req.user;
 
-        const comment = await Comment.create({
+        const articleComment = await ArticleComment.create({
             content,
             rating,
             user: userId,
-            product: productId
+            article: articleId
         });
 
 
         res.status(201).json({
             message: 'Comment created successfully!',
-            comment: comment // Send the entire comment object
+            articleComment: articleComment
         });
 
     } catch (error) {
@@ -40,7 +40,7 @@ exports.createComment = async (req, res, next) => {
 
 }
 
-exports.getCommentsByProduct = async (req, res, next) => {
+exports.getCommentsByArticle = async (req, res, next) => {
 
     try {
         const errors = validationResult(req);
@@ -52,11 +52,11 @@ exports.getCommentsByProduct = async (req, res, next) => {
             throw error;
         }
 
-        const { productId } = req.params;
-        const comments = await Comment.find({ product: productId }).populate('user', 'name');
+        const { articleId } = req.params;
+        const articleComments = await ArticleComment.find({ article: articleId }).populate('user', 'name');
 
         res.status(200).json({
-            comments: comments,
+            articleComments: articleComments,
             message: 'Comments fetched successfully!'
         });
 

@@ -7,10 +7,11 @@ const articleRoutes = require('./routes/article');
 const questionRoutes = require('./routes/questions');
 const bannerRoutes = require('./routes/banner');
 const authRoutes = require('./routes/auth');
-const commentRoutes = require('./routes/comment');
+const productCommentRoutes = require('./routes/productComment');
+const articleCommentRoutes = require('./routes/articleComment');
 const discountRoutes = require('./routes/discount');
-const orderRoutes = require('./routes/order');
 const searchRoutes = require('./routes/search');
+const orderRoutes = require('./routes/order');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
@@ -29,7 +30,8 @@ app.use('/api',
     searchRoutes,
     discountRoutes,
     orderRoutes,
-    commentRoutes,
+    articleCommentRoutes,
+    productCommentRoutes,
     cartRoutes);
 app.use('/auth', authRoutes);
 
