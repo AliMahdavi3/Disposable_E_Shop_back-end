@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const ArticleComment = require('../models/articleComment');
 
+
 exports.createComment = async (req, res, next) => {
 
     try {
@@ -58,6 +59,34 @@ exports.getCommentsByArticle = async (req, res, next) => {
         res.status(200).json({
             articleComments: articleComments,
             message: 'Comments fetched successfully!'
+        });
+
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
+exports.deleteComment = async (req, res, next) => {
+    try {
+
+        const commentId = req.params.commentId;
+
+        // Find the comment by ID
+        const comment = await ArticleComment.findById(commentId);
+
+        if (!comment) {
+            const error = new Error('Comment not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        await ArticleComment.findByIdAndDelete(commentId);
+
+        res.status(200).json({
+            message: 'Comment deleted successfully!'
         });
 
     } catch (error) {

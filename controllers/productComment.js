@@ -67,3 +67,28 @@ exports.getCommentsByProduct = async (req, res, next) => {
         next(error);
     }
 }
+
+exports.deleteComment = async (req, res, next) => {
+    try {
+        const commentId = req.params.commentId;
+        const comment = await ProductComment.findById(commentId);
+
+        if (!comment) {
+            const error = new Error('Comment not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        await ProductComment.findByIdAndDelete(commentId);
+
+        res.status(200).json({
+            message: 'Comment deleted successfully!'
+        });
+
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500
+        }
+        next(error)
+    }
+}

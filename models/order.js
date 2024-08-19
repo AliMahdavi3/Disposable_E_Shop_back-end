@@ -45,6 +45,11 @@ const orderSchema = new Schema({
         required: true,
         default: false
     },
+    status: { // New field for order status
+        type: String,
+        required: true,
+        default: 'pending' // Default status
+    },
 }, {
     timestamps: true
 });

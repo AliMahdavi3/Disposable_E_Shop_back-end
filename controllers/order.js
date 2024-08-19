@@ -115,6 +115,8 @@ exports.getSingleOrder = async (req, res, next) => {
     }
 }
 
+// Checkout Endpoint's
+
 exports.getPayment = async (req, res, next) => {
     try {
         const orderId = req.params.orderId;
@@ -188,3 +190,54 @@ exports.checkPayment = async (req, res, next) => {
         });
     }
 };
+
+// ============================================ //
+
+// This two endpoint are not complete 
+
+// exports.updateOrderStatus = async (req, res, next) => {
+//     try {
+//         const errors = validationResult(req);
+
+//         if (!errors.isEmpty()) {
+//             return res.status(422).json({
+//                 message: 'Validation failed! Your entered data is invalid!',
+//                 errors: errors.array(),
+//             });
+//         }
+
+//         const orderId = req.params.orderId;
+//         const newStatus = req.body.status;
+
+//         const order = await Order.findById(orderId);
+
+//         if(!order) {
+//             const error = new Error('Order not found!');
+//             error.statusCode = 404;
+//             throw error
+//         }
+
+//         order.status = newStatus;
+//         await order.save();
+
+//         res.status(200).json({
+//             message : 'Order status updated successfully!',
+//             order : order
+//         });
+
+        
+//     } catch (error) {
+//         if(!error.statusCode) {
+//             error.statusCode = 500;
+//         }
+//         next(error);
+//     }
+// }
+
+// exports.cancelOrder = async (req, res, next) => {
+//     try {
+
+//     } catch (error) {
+        
+//     }
+// }

@@ -4,6 +4,21 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+exports.getAllUsers = async (req, res, next) => {
+    try {
+        const userList = await User.find().select('-password'); // Exclude the password field
+        res.status(200).json({
+            message: 'Users fetched successfully!',
+            users: userList,
+        });
+    } catch (error) {
+        if(!error.statusCode) {
+            error.statusCode = 500
+        }
+        next(error);
+    }
+}
+
 exports.register = async (req, res, next) => {
     try {
         const errors = validationResult(req);
@@ -235,4 +250,29 @@ exports.changePassword = async (req, res, next) => {
         next(error);
     }
 
+}
+
+exports.deleteUser = async (req, res, next) => {
+    try {
+        const userId = req.params.userId;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            const error = new Error('User Not Found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        await User.findByIdAndDelete(userId);
+
+        res.status(200).json({
+            message: 'User deleted successfully!'
+        });
+
+    } catch (error) {
+        if (error.statusCode) {
+            error.statusCode = 500
+        }
+        next(error);
+    }
 }

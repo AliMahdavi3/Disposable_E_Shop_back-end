@@ -25,6 +25,9 @@ const upload = multer({
 
 router.post('/banner', upload.single('image'), bannerControllers.createBanner);
 router.get('/banners', bannerControllers.getBanners);
+router.get('/banners/:bannerId', bannerControllers.getSingleBanner);
+router.put('/banners/:bannerId', upload.single('image'), bannerControllers.updateBanner);
+router.delete('/banners/:bannerId', bannerControllers.deleteBanner);
 
 
 module.exports = router;

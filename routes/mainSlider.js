@@ -24,8 +24,11 @@ const upload = multer({
 });
 
 
-
 router.get('/mainSliders', mainSliderControllers.getMainSlider);
 router.post('/mainSlider', upload.single('image'), mainSliderControllers.createMainSlider);
+router.get('/mainSliders/:slideId', mainSliderControllers.getSingleSlide);
+router.put('/mainSliders/:slideId', upload.single('image'), mainSliderControllers.updateSlide);
+router.delete('/mainSliders/:slideId', mainSliderControllers.deleteSlide);
+
 
 module.exports = router;

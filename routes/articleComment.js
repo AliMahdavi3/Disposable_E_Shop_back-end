@@ -6,6 +6,7 @@ const authenticate = require('../middlewares/authentication');
 
 router.post('/articles/:articleId/comments', authenticate, articleCommentController.createComment);
 router.get('/articles/:articleId/comments', articleCommentController.getCommentsByArticle);
+router.delete('/comments/:commentId', authenticate, articleCommentController.deleteComment);
 
 
 

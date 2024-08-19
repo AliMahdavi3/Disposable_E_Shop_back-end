@@ -185,3 +185,105 @@ exports.getCategories = async (req, res, next) => {
         next(error);
     }
 }
+
+exports.updateProduct = async (req, res, next) => {
+    try {
+        const errors = validationResult(req);
+
+        if (!errors.isEmpty()) {
+            return res.status(422).json({
+                message: 'Validation failed! Your entered data is invalid!',
+                errors: errors.array(),
+            });
+        }
+
+        const productId = req.params.productId;
+        const product = await Product.findById(productId);
+
+        if (!product) {
+            const error = new Error('Product not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const { title, content, price, productCode, weight, size, available, category, color, tag } = req.body;
+
+        if (title) product.title = title;
+        if (content) product.content = content;
+        if (price) product.price = price;
+        if (productCode) product.productCode = productCode;
+        if (weight) product.weight = weight;
+        if (size) product.size = size;
+        if (available !== undefined) product.available = available;
+        if (category) product.category = category;
+        if (color) product.color = color;
+        if (tag) product.tag = tag;
+
+        // Handle image uploads
+        if (req.files && req.files.length > 0) {
+            if (product.imageUrl && product.imageUrl.length > 0) {
+                for (let imagePath of product.imageUrl) {
+                    await unlinkAsync(imagePath);
+                }
+            }
+            // Update the imageUrl with new images
+            product.imageUrl = req.files.map(file => file.path.replace(/\\/g, '/'));
+        }
+
+        const updatedProduct = await product.save();
+
+        res.status(200).json({
+            message: 'Product updated successfully!',
+            product: updatedProduct,
+        });
+
+    } catch (error) {
+        // Clean up uploaded files in case of error
+        if (req.files) {
+            for (let file of req.files) {
+                try {
+                    await unlinkAsync(file.path);
+                } catch (cleanupError) {
+                    console.error('Error cleaning up files:', cleanupError);
+                }
+            }
+        }
+
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+};
+
+exports.deleteProduct = async (req, res, next) => {
+    try {
+        const productId = req.params.productId;
+        const product = await Product.findById(productId);
+
+        if (!product) {
+            const error = new Error('Product not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Delete associated image files if they exist
+        if (product.imageUrl && product.imageUrl.length > 0) {
+            for (let imagePath of product.imageUrl) {
+                await unlinkAsync(imagePath);
+            }
+        }
+
+        await Product.findByIdAndDelete(productId);
+
+        res.status(200).json({
+            message: 'Product deleted successfully!'
+        })
+
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500
+        }
+        next(error)
+    }
+}

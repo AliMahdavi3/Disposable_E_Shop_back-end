@@ -164,3 +164,102 @@ exports.getMoreViewedArticle = async (req, res, next) => {
         next(error);
     }
 }
+
+exports.updateArticle = async (req, res, next) => {
+    try {
+        const errors = validationResult(req);
+
+        if (!errors.isEmpty()) {
+            return res.status(422).json({
+                message: 'Validation failed! Your entered data is invalid!',
+                errors: errors.array(),
+            });
+        }
+
+        const articleId = req.params.articleId;
+        const article = await Article.findById(articleId);
+
+        if (!article) {
+            const error = new Error('Article not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const { title, content, excerpt, categories, readTime } = req.body;
+
+        if (req.files && req.files['image']) {
+            // If there's a new image, remove the old one
+            await unlinkAsync(article.imageUrl);
+            article.imageUrl = req.files['image'][0].path.replace(/\\/g, '/');
+        }
+
+        if (req.files && req.files['authorProfileImage']) {
+            // If there's a new author profile image, remove the old one
+            await unlinkAsync(article.author.profileImage);
+            article.author.profileImage = req.files['authorProfileImage'][0].path.replace(/\\/g, '/');
+        }
+
+        article.title = title;
+        article.content = content;
+        article.excerpt = excerpt;
+        article.categories = categories;
+        article.readTime = readTime;
+        article.author.name = req.body.authorName;
+        article.author.bio = req.body.authorBio;
+
+        const updatedArticle = await article.save();
+
+        res.status(200).json({
+            message: 'Article updated successfully!',
+            article: updatedArticle,
+        });
+
+    } catch (error) {
+        if (req.files) {
+            for (let file of req.files) {
+                try {
+                    await unlinkAsync(file.path);
+                } catch (cleanupError) {
+                    console.error('Error cleaning up files:', cleanupError);
+                }
+            }
+        }
+
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+};
+
+exports.deleteArticle = async (req, res, next) => {
+    try {
+
+        const articleId = req.params.articleId;
+
+        const article = await Article.findById(articleId);
+
+        if (!article) {
+            const error = new Error('Article not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Remove the associated image files from the filesystem
+        await unlinkAsync(article.imageUrl);
+        await unlinkAsync(article.author.profileImage);
+
+        // Delete the article from the database
+        await Article.findByIdAndDelete(articleId);
+
+        res.status(200).json({
+            message: 'Article deleted successfully!'
+        });
+
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}

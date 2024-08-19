@@ -18,7 +18,10 @@ router.post('/login', [
 ], authController.login);
 
 router.get('/user', authenticate, authController.getUser);
+router.get('/users', authenticate, authController.getAllUsers);
 router.put('/user/:userId', authenticate, authController.editUser);
+router.delete('/user/:userId', authenticate, authController.deleteUser);
+
 router.put('/changePassword/:userId', authenticate, authController.changePassword)
 
 
