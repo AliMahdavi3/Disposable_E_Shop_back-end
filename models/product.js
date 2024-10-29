@@ -32,7 +32,7 @@ const productSchema = new Schema({
     },
     available: {
         type: Boolean,
-        required: true
+        required: true,
     },
     category: {
         type: String,

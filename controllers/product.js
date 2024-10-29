@@ -54,10 +54,12 @@ exports.createProduct = async (req, res, next) => {
         });
         const productResults = await product.save();
 
+
         res.status(201).json({
             message: "Product Created Successfully!",
             product: productResults,
         });
+
 
     } catch (error) {
 
@@ -267,7 +269,6 @@ exports.deleteProduct = async (req, res, next) => {
             throw error;
         }
 
-        // Delete associated image files if they exist
         if (product.imageUrl && product.imageUrl.length > 0) {
             for (let imagePath of product.imageUrl) {
                 await unlinkAsync(imagePath);

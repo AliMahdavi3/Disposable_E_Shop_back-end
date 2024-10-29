@@ -12,7 +12,8 @@ const discountSchema = new Schema({
         required: true
     },
     expiresAt: {
-        type: Date
+        type: Date,
+        required: false
     },
     isActive: {
         type: Boolean,

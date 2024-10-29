@@ -37,7 +37,11 @@ exports.createMainSlider = async (req, res, next) => {
             throw error;
         }
 
+        const { title, content } = req.body;
+
         const mainSlider = new MainSlider({
+            title: title,
+            content : content,
             imageUrl: req.file.path.replace(/\\/g, '/')
         });
         const mainSliderResults = await mainSlider.save();
@@ -111,6 +115,11 @@ exports.updateSlide = async (req, res, next) => {
             throw error
         }
 
+        const { title, content } = req.body;
+
+        if (title) slide.title = title;
+        if (content) slide.content = content;
+
         // If a new file is uploaded, update the image URL
         if (req.file) {
             // Delete the old image file
@@ -123,6 +132,7 @@ exports.updateSlide = async (req, res, next) => {
             // Update the image URL with the new file path
             slide.imageUrl = req.file.path.replace(/\\/g, '/');
         }
+
 
         const updatedSlide = await slide.save();
 

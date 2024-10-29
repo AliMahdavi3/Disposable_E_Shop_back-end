@@ -38,8 +38,13 @@ exports.createBanner = async (req, res, next) => {
             throw error;
         }
 
+        const { title, content, link } = req.body;
+
         const banner = new Banner({
-            imageUrl: req.file.path.replace(/\\/g, '/')
+            title: title,
+            content: content,
+            imageUrl: req.file.path.replace(/\\/g, '/'),
+            link: link
         });
 
         const bannerResults = await banner.save();
@@ -112,6 +117,12 @@ exports.updateBanner = async (req, res, next) => {
             error.statusCode = 404;
             throw error;
         }
+
+        const {title, content, link} = req.body;
+        
+        if (title) banner.title = title;
+        if (content) banner.content = content;
+        if (link) banner.link = link;
 
         // If a new file is uploaded, update the image URL
         if (req.file) {
