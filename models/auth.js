@@ -56,6 +56,10 @@ const userSchema = new Schema({
             }
         }]
     },
+    favorites: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Product',
+    }],
 }, {
     timestamps: true
 });
@@ -98,7 +102,7 @@ userSchema.methods.updateCartProductQuantity = function (productId, newQuantity)
         return cp.productId.toString() === productId.toString();
     });
 
-    if(cartProductIndex === -1) {
+    if (cartProductIndex === -1) {
         throw new Error('Product not found in cart!');
     };
 

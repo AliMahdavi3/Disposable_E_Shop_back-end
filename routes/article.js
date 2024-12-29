@@ -32,6 +32,7 @@ const upload = multer({
 router.get('/articles', articleControllers.getArticles);
 router.post('/article', upload, articleControllers.createArticle);
 router.get('/articles/more-view', articleControllers.getMoreViewedArticle);
+router.get('/articles/newest', articleControllers.getNewestArticles);
 router.get('/articles/:articleId', upload, articleControllers.getSingleArticle);
 router.patch('/articles/:articleId/likes', authenticate, articleControllers.updateArticlesLike);
 router.put('/articles/:articleId', authenticate, upload, articleControllers.updateArticle);

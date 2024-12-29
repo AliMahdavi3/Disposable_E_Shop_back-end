@@ -73,8 +73,6 @@ exports.deleteComment = async (req, res, next) => {
     try {
 
         const commentId = req.params.commentId;
-
-        // Find the comment by ID
         const comment = await ArticleComment.findById(commentId);
 
         if (!comment) {

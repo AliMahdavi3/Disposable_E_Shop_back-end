@@ -165,6 +165,21 @@ exports.getMoreViewedArticle = async (req, res, next) => {
     }
 }
 
+exports.getNewestArticles = async (req, res, next) => {
+    try {
+        const newestArticles = await Article.find().sort({ createdAt: -1 }).limit(6);
+        res.status(200).json({
+            message: 'Newest articles fetched successfully!',
+            articles: newestArticles
+        })
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
 exports.updateArticle = async (req, res, next) => {
     try {
         const errors = validationResult(req);

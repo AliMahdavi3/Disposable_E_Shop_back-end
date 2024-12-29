@@ -35,6 +35,7 @@ router.get('/disposable-products', productsControllers.getDisposableProducts);
 router.get('/birth-day-products', productsControllers.getBirthDayProducts);
 router.get('/newest-products', productsControllers.getNewestProducts);
 router.get('/products/:productId', productsControllers.getSingleProduct);
+router.get('/products/:productId/related', productsControllers.getRelatedProducts);
 
 router.put('/products/:productId', authenticate, upload.array('image', 4), productsControllers.updateProduct);
 router.delete('/products/:productId', authenticate, productsControllers.deleteProduct);

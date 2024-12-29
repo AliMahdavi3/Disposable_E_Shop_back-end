@@ -188,6 +188,37 @@ exports.getCategories = async (req, res, next) => {
     }
 }
 
+exports.getRelatedProducts = async (req, res, next) => {
+    try {
+        const productId = req.params.productId;
+
+        // First, find the product to get its category
+        const product = await Product.findById(productId);
+        if (!product) {
+            const error = new Error('Product not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Now, find related products based on the category
+        const relatedProducts = await Product.find({
+            category: product.category,
+            _id: { $ne: productId } // Exclude the current product
+        });
+
+        res.status(200).json({
+            message: "Related products fetched successfully!",
+            products: relatedProducts,
+        });
+
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
 exports.updateProduct = async (req, res, next) => {
     try {
         const errors = validationResult(req);
@@ -288,3 +319,4 @@ exports.deleteProduct = async (req, res, next) => {
         next(error)
     }
 }
+

@@ -12,13 +12,19 @@ const discountSchema = new Schema({
         required: true
     },
     expiresAt: {
-        type: Date,
+        type: String,
         required: false
     },
     isActive: {
         type: Boolean,
         default: true
+    },
+    applicableTo: {
+        type: [String], // Array of product IDs that this discount applies to
+        required: false
     }
+}, {
+    timestamps: true
 });
 
 module.exports = mongoose.model('Discount', discountSchema);

@@ -23,6 +23,7 @@ const upload = multer({
     fileFilter: fileFilter,
 });
 
+
 router.post('/banner', upload.single('image'), bannerControllers.createBanner);
 router.get('/banners', bannerControllers.getBanners);
 router.get('/banners/:bannerId', bannerControllers.getSingleBanner);

@@ -12,7 +12,7 @@ exports.getAllUsers = async (req, res, next) => {
             users: userList,
         });
     } catch (error) {
-        if(!error.statusCode) {
+        if (!error.statusCode) {
             error.statusCode = 500
         }
         next(error);
@@ -49,7 +49,7 @@ exports.register = async (req, res, next) => {
             });
         }
 
-     
+
 
         const user = new User({
             email,
@@ -171,7 +171,7 @@ exports.editUser = async (req, res, next) => {
         }
 
         const userId = req.params.userId;
-        const { name, email, phone, city, address, zipCode} = req.body;
+        const { name, email, phone, city, address, zipCode } = req.body;
 
         const user = await User.findById(userId);
 
@@ -276,3 +276,92 @@ exports.deleteUser = async (req, res, next) => {
         next(error);
     }
 }
+
+exports.getFavorites = async (req, res, next) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId).populate('favorites');
+
+        if (!user) {
+            const error = new Error('User not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+        res.status(200).json({
+            message: 'Favorites fetched successfully!',
+            favorites: user.favorites 
+        });
+
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
+exports.addToFavorites = async (req, res, next) => {
+    try {
+        const userId = req.user._id;
+        let { productId } = req.body;
+        const user = await User.findById(userId);
+
+
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            const error = new Error('Validation Faild!, Your Entered Data is Invalid');
+            error.statusCode = 422;
+            throw error;
+        }
+
+        if (!user) {
+            const error = new Error('User not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        if (!user.favorites.includes(productId)) {
+            user.favorites.push(productId);
+            await user.save();
+        }
+
+        res.status(200).json({
+            message: "Product added to Fav list successfully!",
+            favorites: user.favorites,
+        });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+};
+
+exports.removeFromFavorites = async (req, res, next) => {
+    try {
+        const userId = req.user._id;
+        const { productId } = req.params;
+        const user = await User.findById(userId);
+
+
+        if (!user) {
+            const error = new Error('User not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        user.favorites = user.favorites.filter(id => id.toString() !== productId);
+        await user.save();
+
+        res.status(200).json({
+            message: 'Product removed from Fav list successfully!',
+            favorites: user.favorites
+        });
+
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+};
