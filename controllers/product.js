@@ -36,7 +36,7 @@ exports.createProduct = async (req, res, next) => {
             throw error;
         }
 
-        const { title, content, price, productCode, weight, size, available, category, color, tag, userId } = req.body
+        const { title, content, price, productCode, weight, size, available, category, color, tag, rating, userId } = req.body
 
         const product = new Product({
             title: title,
@@ -49,6 +49,7 @@ exports.createProduct = async (req, res, next) => {
             category: category,
             color: color,
             tag: tag,
+            rating: rating,
             imageUrl: req.files.map(file => file.path.replace(/\\/g, '/')),
             userId: req.user._id,
         });
@@ -192,7 +193,6 @@ exports.getRelatedProducts = async (req, res, next) => {
     try {
         const productId = req.params.productId;
 
-        // First, find the product to get its category
         const product = await Product.findById(productId);
         if (!product) {
             const error = new Error('Product not found!');
@@ -200,10 +200,9 @@ exports.getRelatedProducts = async (req, res, next) => {
             throw error;
         }
 
-        // Now, find related products based on the category
         const relatedProducts = await Product.find({
             category: product.category,
-            _id: { $ne: productId } // Exclude the current product
+            _id: { $ne: productId }
         });
 
         res.status(200).json({
@@ -239,7 +238,7 @@ exports.updateProduct = async (req, res, next) => {
             throw error;
         }
 
-        const { title, content, price, productCode, weight, size, available, category, color, tag } = req.body;
+        const { title, content, price, productCode, weight, size, available, category, color, tag, rating } = req.body;
 
         if (title) product.title = title;
         if (content) product.content = content;
@@ -251,6 +250,7 @@ exports.updateProduct = async (req, res, next) => {
         if (category) product.category = category;
         if (color) product.color = color;
         if (tag) product.tag = tag;
+        if (rating) product.rating = rating;
 
         // Handle image uploads
         if (req.files && req.files.length > 0) {

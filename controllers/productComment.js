@@ -27,7 +27,7 @@ exports.createComment = async (req, res, next) => {
 
         res.status(201).json({
             message: 'Comment created successfully!',
-            productComment: productComment // Send the entire comment object
+            productComment: productComment
         });
 
     } catch (error) {
@@ -60,6 +60,33 @@ exports.getCommentsByProduct = async (req, res, next) => {
             message: 'Comments fetched successfully!'
         });
 
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
+exports.getRandomComment = async (req, res, next) => {
+    try {
+        const { productId } = req.params;
+
+        const productComments = await ProductComment.find({ product: productId });
+
+        if (productComments.length === 0) {
+            return res.status(404).json({
+                message: 'No comments found for this product.'
+            });
+        }
+
+        const randomIndex = Math.floor(Math.random() * productComments.length);
+        const randomComment = productComments[randomIndex];
+
+        res.status(200).json({
+            comment: randomComment,
+            message: 'Random comment fetched successfully!'
+        });
     } catch (error) {
         if (!error.statusCode) {
             error.statusCode = 500;
