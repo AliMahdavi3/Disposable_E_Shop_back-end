@@ -11,11 +11,7 @@ const bannerSchema = new Schema({
         required: false
     },
     imageUrl: {
-        type: String,
-        required: false
-    },
-    link: {
-        type: String,
+        type: [String],
         required: false
     },
 }, {

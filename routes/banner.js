@@ -11,6 +11,7 @@ const storage = multer.diskStorage({
         cb(null, file.fieldname + '_' + Date.now() + '.jpg');
     }
 });
+
 const fileFilter = (req, file, cb) => {
     if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png' || file.mimetype === 'image/jpg') {
         cb(null, true);
@@ -18,16 +19,17 @@ const fileFilter = (req, file, cb) => {
         cb(new Error('file type not supported!'));
     }
 }
+
 const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
 });
 
 
-router.post('/banner', upload.single('image'), bannerControllers.createBanner);
+router.post('/banner', upload.array('image', 4), bannerControllers.createBanner);
 router.get('/banners', bannerControllers.getBanners);
 router.get('/banners/:bannerId', bannerControllers.getSingleBanner);
-router.put('/banners/:bannerId', upload.single('image'), bannerControllers.updateBanner);
+router.put('/banners/:bannerId', upload.array('image', 4), bannerControllers.updateBanner);
 router.delete('/banners/:bannerId', bannerControllers.deleteBanner);
 
 

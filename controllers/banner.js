@@ -32,19 +32,18 @@ exports.createBanner = async (req, res, next) => {
             throw error;
         }
 
-        if (!req.file) {
+        if (!req.files || req.files.length === 0) {
             const error = new Error("Please upload at least one file");
             error.statusCode = 422;
             throw error;
         }
 
-        const { title, content, link } = req.body;
+        const { title, content } = req.body;
 
         const banner = new Banner({
             title: title,
             content: content,
-            imageUrl: req.file.path.replace(/\\/g, '/'),
-            link: link
+            imageUrl: req.files.map(file => file.path.replace(/\\/g, '/')),
         });
 
         const bannerResults = await banner.save();
@@ -118,23 +117,18 @@ exports.updateBanner = async (req, res, next) => {
             throw error;
         }
 
-        const {title, content, link} = req.body;
-        
+        const { title, content, link } = req.body;
+
         if (title) banner.title = title;
         if (content) banner.content = content;
-        if (link) banner.link = link;
 
-        // If a new file is uploaded, update the image URL
-        if (req.file) {
-            // Delete the old image file
-            try {
-                await unlinkAsync(banner.imageUrl); // Remove the old image file
-            } catch (cleanupError) {
-                console.error('Error cleaning up old image:', cleanupError);
+        if (req.files && req.files.length > 0) {
+            if (banner.imageUrl && banner.imageUrl.length > 0) {
+                for (let imagePath of banner.imageUrl) {
+                    await unlinkAsync(imagePath);
+                }
             }
-
-            // Update the image URL with the new file path
-            banner.imageUrl = req.file.path.replace(/\\/g, '/');
+            banner.imageUrl = req.files.map(file => file.path.replace(/\\/g, '/'));
         }
 
         const updatedBanner = await banner.save();
@@ -145,12 +139,15 @@ exports.updateBanner = async (req, res, next) => {
         });
 
     } catch (error) {
-        if (req.file) {
-            // Clean up uploaded file in case of error
-            try {
-                await unlinkAsync(req.file.path);
-            } catch (cleanupError) {
-                console.error('Error cleaning up uploaded file:', cleanupError);
+
+        // Clean up uploaded files in case of error
+        if (req.files) {
+            for (let file of req.files) {
+                try {
+                    await unlinkAsync(file.path);
+                } catch (cleanupError) {
+                    console.error('Error cleaning up files:', cleanupError);
+                }
             }
         }
 
@@ -163,8 +160,8 @@ exports.updateBanner = async (req, res, next) => {
 
 exports.deleteBanner = async (req, res, next) => {
     try {
-        const bannerId = req.params.bannerId; // Extract banner ID from request parameters
-        const banner = await Banner.findById(bannerId); // Find the banner by ID
+        const bannerId = req.params.bannerId;
+        const banner = await Banner.findById(bannerId);
 
         if (!banner) {
             const error = new Error('Banner not found!');
@@ -173,10 +170,10 @@ exports.deleteBanner = async (req, res, next) => {
         }
 
         // Delete the old image file
-        try {
-            await unlinkAsync(banner.imageUrl); // Remove the image file from the server
-        } catch (cleanupError) {
-            console.error('Error cleaning up image file:', cleanupError);
+        if (banner.imageUrl && banner.imageUrl.length > 0) {
+            for (let imagePath of banner.imageUrl) {
+                await unlinkAsync(imagePath);
+            }
         }
 
         // Delete the banner from the database

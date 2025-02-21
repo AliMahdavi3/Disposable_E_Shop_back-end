@@ -189,6 +189,22 @@ exports.getCategories = async (req, res, next) => {
     }
 }
 
+exports.getProductByCategory = async (req, res, next) => {
+    try {
+        const category = req.params.category;
+        const products = await Product.find({ category: category });
+        res.status(200).json({
+            message: `Products in category '${category}' fetched successfully!`,
+            products: products,
+        });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
 exports.getRelatedProducts = async (req, res, next) => {
     try {
         const productId = req.params.productId;

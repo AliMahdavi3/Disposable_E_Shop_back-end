@@ -28,7 +28,7 @@ const upload = multer({
 
 router.get('/products', productsControllers.getProducts);
 router.post('/product', authenticate, upload.array('image', 4), productsControllers.createProduct);
-
+router.get('/products/category/:category', productsControllers.getProductByCategory);
 router.get('/products/categories', productsControllers.getCategories);
 router.get('/top-selling-products', productsControllers.getTopSellingProducts);
 router.get('/disposable-products', productsControllers.getDisposableProducts);
@@ -36,7 +36,6 @@ router.get('/birth-day-products', productsControllers.getBirthDayProducts);
 router.get('/newest-products', productsControllers.getNewestProducts);
 router.get('/products/:productId', productsControllers.getSingleProduct);
 router.get('/products/:productId/related', productsControllers.getRelatedProducts);
-
 router.put('/products/:productId', authenticate, upload.array('image', 4), productsControllers.updateProduct);
 router.delete('/products/:productId', authenticate, productsControllers.deleteProduct);
 
