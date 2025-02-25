@@ -17,6 +17,10 @@ router.post('/login', [
     body('password').trim().isLength({ min: 5 }),
 ], authController.login);
 
+router.post('/reset-password', [
+    body('email').isEmail(),
+], authController.resetPassword);
+
 router.get('/user', authenticate, authController.getUser);
 router.get('/users', authenticate, authController.getAllUsers);
 router.post('/user/favorites', authenticate, authController.addToFavorites);

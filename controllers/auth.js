@@ -2,22 +2,10 @@ const { validationResult } = require('express-validator');
 const User = require('../models/auth');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const sendEmail = require('../utils/emailSender');
 require('dotenv').config();
 
-exports.getAllUsers = async (req, res, next) => {
-    try {
-        const userList = await User.find().select('-password'); // Exclude the password field
-        res.status(200).json({
-            message: 'Users fetched successfully!',
-            users: userList,
-        });
-    } catch (error) {
-        if (!error.statusCode) {
-            error.statusCode = 500
-        }
-        next(error);
-    }
-}
 
 exports.register = async (req, res, next) => {
     try {
@@ -62,6 +50,14 @@ exports.register = async (req, res, next) => {
             password: hashedPassword,
         });
         const result = await user.save();
+
+        await sendEmail({
+            option: {
+                subject: "ثبت نام",
+                text: "شما با موفقیت ثبت نام شدید!",
+                userEmail: email,
+            },
+        });
 
         return res.status(201).json({
             message: 'User created Successfully!',
@@ -129,6 +125,86 @@ exports.login = async (req, res, next) => {
     }
 }
 
+exports.changePassword = async (req, res, next) => {
+
+    try {
+
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            const error = new Error('Validation Faild!, Your Entered Data is Invalid');
+            error.statusCode = 422;
+            throw error;
+        }
+
+        const { oldPassword, newPassword } = req.body;
+
+        const userId = req.params.userId;
+        const user = await User.findById(userId);
+        if (!user) {
+            const error = new Error('User not found!')
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isMatch) {
+            const error = new Error('Your old password is incorrect!')
+            error.statusCode = 401;
+            throw error;
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+        user.password = hashedPassword;
+        await user.save();
+
+        res.status(200).json({
+            message: 'Password updated successfully!'
+        })
+
+
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+
+}
+
+exports.resetPassword = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            const error = new Error('User not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        user.resetToken = token;
+        user.resetTokenExpiry = Date.now() + 3600000; // Set expiration time (1 hour)
+
+        await user.save();
+
+        const resetLink = `http://localhost:3000/reset-password/${token}`;
+        await sendEmail({
+            option: {
+                userEmail: email,
+                subject: "بازیابی رمزعبور",
+                html: `<p>شما درخواست بازیابی رمز عبور دادید!. 
+                برای تغییر رمزعبور بر روی لینک کلیک کنید!:</p>
+                <a href="${resetLink}">Reset Password</a>`
+            },
+        });
+
+    } catch (error) {
+
+    }
+}
+
 exports.getUser = async (req, res, next) => {
     try {
 
@@ -155,6 +231,21 @@ exports.getUser = async (req, res, next) => {
     } catch (error) {
         if (!error.statusCode) {
             error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
+exports.getAllUsers = async (req, res, next) => {
+    try {
+        const userList = await User.find().select('-password'); // Exclude the password field
+        res.status(200).json({
+            message: 'Users fetched successfully!',
+            users: userList,
+        });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500
         }
         next(error);
     }
@@ -205,53 +296,6 @@ exports.editUser = async (req, res, next) => {
     }
 }
 
-exports.changePassword = async (req, res, next) => {
-
-    try {
-
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            const error = new Error('Validation Faild!, Your Entered Data is Invalid');
-            error.statusCode = 422;
-            throw error;
-        }
-
-        const { oldPassword, newPassword } = req.body;
-
-        const userId = req.params.userId;
-        const user = await User.findById(userId);
-        if (!user) {
-            const error = new Error('User not found!')
-            error.statusCode = 404;
-            throw error;
-        }
-
-        const isMatch = await bcrypt.compare(oldPassword, user.password);
-        if (!isMatch) {
-            const error = new Error('Your old password is incorrect!')
-            error.statusCode = 401;
-            throw error;
-        }
-
-        const hashedPassword = await bcrypt.hash(newPassword, 12);
-
-        user.password = hashedPassword;
-        await user.save();
-
-        res.status(200).json({
-            message: 'Password updated successfully!'
-        })
-
-
-    } catch (error) {
-        if (!error.statusCode) {
-            error.statusCode = 500;
-        }
-        next(error);
-    }
-
-}
-
 exports.deleteUser = async (req, res, next) => {
     try {
         const userId = req.params.userId;
@@ -289,7 +333,7 @@ exports.getFavorites = async (req, res, next) => {
         }
         res.status(200).json({
             message: 'Favorites fetched successfully!',
-            favorites: user.favorites 
+            favorites: user.favorites
         });
 
     } catch (error) {
