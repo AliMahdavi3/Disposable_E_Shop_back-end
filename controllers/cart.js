@@ -1,5 +1,6 @@
 const { validationResult } = require('express-validator');
 const Product = require('../models/product');
+const { calculateTotals } = require('../utils/cartUtils');
 const path = require('path');
 const util = require('util');
 const fs = require('fs');
@@ -10,6 +11,13 @@ exports.postCart = async (req, res, next) => {
     try {
         const productId = req.body.productId;
         const quantity = parseInt(req.body.quantity);
+
+        if (!quantity || quantity <= 0) {
+            const error = new Error('Invalid quantity provided!');
+            error.statusCode = 400;
+            throw error;
+        }
+
         const product = await Product.findById(productId);
 
         if (!product) {
@@ -34,9 +42,7 @@ exports.postCart = async (req, res, next) => {
 
 exports.getCart = async (req, res, next) => {
     try {
-
         await req.user.populate('cart.items.productId');
-
         const cartItems = req.user.cart.items.map((i) => {
             return {
                 product: { ...i.productId._doc },
@@ -44,9 +50,14 @@ exports.getCart = async (req, res, next) => {
             };
         });
 
+        const { totalPrice, totalQuantity, formattedPrice } = calculateTotals(cartItems);
+
         res.status(200).json({
             message: 'Fetched cart successfully!',
             cart: cartItems,
+            totalPrice: totalPrice,
+            formattedPrice: formattedPrice,
+            totalQuantity: totalQuantity,
         });
 
     } catch (error) {
@@ -58,7 +69,7 @@ exports.getCart = async (req, res, next) => {
     }
 }
 
-exports.updateCartProductQuantity = async (req, res, next) => {
+exports.updatingCartProductQuantity = async (req, res, next) => {
     try {
         const productId = req.params.productId;
         const newQuantity = parseInt(req.body.quantity);
@@ -70,9 +81,22 @@ exports.updateCartProductQuantity = async (req, res, next) => {
         }
 
         await req.user.updateCartProductQuantity(productId, newQuantity);
+        await req.user.populate('cart.items.productId');
+        const updatedCartItems = req.user.cart.items.map((i) => {
+            return {
+                product: { ...i.productId._doc },
+                quantity: i.quantity,
+            };
+        });
+
+        const { totalPrice, totalQuantity, formattedPrice } = calculateTotals(updatedCartItems);
 
         res.status(200).json({
-            message: 'Cart updated successfully!'
+            message: 'Cart updated successfully!',
+            cart: updatedCartItems,
+            totalPrice: totalPrice,
+            formattedPrice: formattedPrice,
+            totalQuantity: totalQuantity,
         });
 
     } catch (error) {
@@ -84,13 +108,26 @@ exports.updateCartProductQuantity = async (req, res, next) => {
 }
 
 exports.deleteProductFromCart = async (req, res, next) => {
-
     try {
         const productId = req.params.productId;
         await req.user.removeFromCart(productId);
 
+        await req.user.populate('cart.items.productId');
+        const updatedCartItems = req.user.cart.items.map((i) => {
+            return {
+                product: { ...i.productId._doc },
+                quantity: i.quantity,
+            };
+        });
+
+        const { totalPrice, totalQuantity, formattedPrice } = calculateTotals(updatedCartItems);
+
         res.status(200).json({
-            message: 'Product deleted from cart successfully!'
+            message: 'Product deleted from cart successfully!',
+            cart: updatedCartItems,
+            totalPrice: totalPrice,
+            formattedPrice: formattedPrice,
+            totalQuantity: totalQuantity,
         });
 
     } catch (error) {
@@ -106,7 +143,6 @@ exports.getCartCount = async (req, res, next) => {
         await req.user.populate('cart.items.productId');
         const cartItems = req.user.cart.items;
 
-        // Calculate the total count (quantity) of products in the cart
         const totalCount = cartItems.reduce((count, currentItem) => {
             return count + currentItem.quantity;
         }, 0);

@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-
 const orderSchema = new Schema({
     user: {
         userId: {
@@ -12,47 +11,44 @@ const orderSchema = new Schema({
         name: {
             type: String,
             required: true
+        }
+    },
+    items: [{
+        product: {
+            type: Object,
+            required: true
         },
+        quantity: {
+            type: Number,
+            required: true
+        }
+    }],
+    status: {
+        type: String,
+        default: 'Pending'
     },
-    cart: {
-        items: [
-            {
-                product: {
-                    type: Object,
-                    required: true
-                },
-                quantity: {
-                    type: Number,
-                    required: true
-                }
-            }
-        ]
-    },
-    total: {
-        type: Number,
-        required: true
-    },
-    discount: {
-        code: String,
-        amount: Number
+    shippingAddress: {
+        type: String,
+        required: true,
     },
     additionalComment: {
         type: String,
-        required: false
+        required: false,
     },
-    isPaid: {
-        type: Boolean,
-        required: true,
-        default: false
+    totalPrice: {
+        type: Number,
+        required: true
     },
-    status: { // New field for order status
+    totalQuantity: {
+        type: Number,
+        required: true
+    },
+    formattedPrice: {
         type: String,
-        required: true,
-        default: 'pending' // Default status
-    },
+        required: true
+    }
 }, {
-    timestamps: true
+    timestamps: true,
 });
-
 
 module.exports = mongoose.model('Order', orderSchema);

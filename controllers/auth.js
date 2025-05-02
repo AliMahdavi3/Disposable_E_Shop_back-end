@@ -37,8 +37,6 @@ exports.register = async (req, res, next) => {
             });
         }
 
-
-
         const user = new User({
             email,
             name,
@@ -53,9 +51,9 @@ exports.register = async (req, res, next) => {
 
         await sendEmail({
             option: {
-                subject: "ثبت نام",
-                text: "شما با موفقیت ثبت نام شدید!",
                 userEmail: email,
+                subject: "ثبت نام",
+                html: `<p>ثبت نام شما موفقیت آمیز بود!</p>`
             },
         });
 
@@ -125,6 +123,101 @@ exports.login = async (req, res, next) => {
     }
 }
 
+exports.resetPasswordRequest = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            const error = new Error('User not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        user.resetToken = token;
+        user.resetTokenExpiry = Date.now() + 3600000;
+
+        await user.save();
+
+        const resetLink = `http://localhost:3000/reset-password/${token}`;
+        await sendEmail({
+            option: {
+                userEmail: email,
+                subject: "بازیابی رمزعبور",
+                html: `<p>
+                    <span>
+                        !شما درخواست بازیابی رمز عبور دادید
+                    </span><br />
+                    <span>
+                        !برای تغییر رمزعبور بر روی لینک کلیک کنید!
+                    </span> : 
+                </p><br />
+                <a href="${resetLink}">لینک بازیابی</a>`
+            },
+        });
+
+        res.status(200).json({
+            message: "Reset link sent to user email!",
+        });
+
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
+exports.resetPassword = async (req, res, next) => {
+    try {
+        const { token, password } = req.body;
+
+        if (!token || !password) {
+            const error = new Error('Token and new password are require!');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const user = await User.findOne({
+            resetToken: token,
+            resetTokenExpiry: { $gt: Date.now() },
+        });
+
+        if (!user) {
+            const error = new Error('Invalid or Expired Token!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        user.password = hashedPassword;
+        user.resetToken = undefined;
+        user.resetTokenExpiry = undefined;
+
+        await user.save();
+
+        await sendEmail({
+            option: {
+                userEmail: user.email,
+                subject: 'رمزعبور شما تغییر کرد!',
+                html: `<p>بازیابی رمزعبور شما موفقیت آمیز بود!</p>`,
+            }
+        });
+
+        res.status(200).json({
+            message: "Password has been RESET successfully!",
+        });
+
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
 exports.changePassword = async (req, res, next) => {
 
     try {
@@ -170,39 +263,6 @@ exports.changePassword = async (req, res, next) => {
         next(error);
     }
 
-}
-
-exports.resetPassword = async (req, res, next) => {
-    try {
-        const { email } = req.body;
-        const user = await User.findOne({ email });
-
-        if (!user) {
-            const error = new Error('User not found!');
-            error.statusCode = 404;
-            throw error;
-        }
-
-        const token = crypto.randomBytes(32).toString('hex');
-        user.resetToken = token;
-        user.resetTokenExpiry = Date.now() + 3600000; // Set expiration time (1 hour)
-
-        await user.save();
-
-        const resetLink = `http://localhost:3000/reset-password/${token}`;
-        await sendEmail({
-            option: {
-                userEmail: email,
-                subject: "بازیابی رمزعبور",
-                html: `<p>شما درخواست بازیابی رمز عبور دادید!. 
-                برای تغییر رمزعبور بر روی لینک کلیک کنید!:</p>
-                <a href="${resetLink}">Reset Password</a>`
-            },
-        });
-
-    } catch (error) {
-
-    }
 }
 
 exports.getUser = async (req, res, next) => {

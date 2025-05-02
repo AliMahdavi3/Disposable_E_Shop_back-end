@@ -17,8 +17,12 @@ router.post('/login', [
     body('password').trim().isLength({ min: 5 }),
 ], authController.login);
 
-router.post('/reset-password', [
+router.post('/reset-password-request', [
     body('email').isEmail(),
+], authController.resetPasswordRequest);
+
+router.post('/reset-password', [
+    body('password').trim().isLength({ min: 5 }),
 ], authController.resetPassword);
 
 router.get('/user', authenticate, authController.getUser);

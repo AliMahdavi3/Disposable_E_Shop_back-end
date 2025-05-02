@@ -3,17 +3,18 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const articleRoutes = require('./routes/article');
+const articleCommentRoutes = require('./routes/articleComment');
+const authRoutes = require('./routes/auth');
+const bannerRoutes = require('./routes/banner');
+const cartRoutes = require('./routes/cart');
+const discountRoutes = require('./routes/discount');
 const mainSliderRoutes = require('./routes/mainSlider');
 const productRoutes = require('./routes/product');
-const cartRoutes = require('./routes/cart');
-const articleRoutes = require('./routes/article');
-const questionRoutes = require('./routes/questions');
-const bannerRoutes = require('./routes/banner');
-const authRoutes = require('./routes/auth');
 const productCommentRoutes = require('./routes/productComment');
-const articleCommentRoutes = require('./routes/articleComment');
-const discountRoutes = require('./routes/discount');
+const questionRoutes = require('./routes/questions');
 const searchRoutes = require('./routes/search');
+const ticketToSupportRoutes = require('./routes/ticketToSupport');
 const orderRoutes = require('./routes/order');
 
 const app = express();
@@ -24,17 +25,19 @@ app.use(bodyParser.json());
 
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/api',
+    articleRoutes,
+    articleCommentRoutes,
+    bannerRoutes,
+    cartRoutes,
+    discountRoutes,
     mainSliderRoutes,
     productRoutes,
-    articleRoutes,
-    questionRoutes,
-    bannerRoutes,
-    searchRoutes,
-    discountRoutes,
-    orderRoutes,
-    articleCommentRoutes,
     productCommentRoutes,
-    cartRoutes);
+    questionRoutes,
+    searchRoutes,
+    ticketToSupportRoutes,
+    orderRoutes,
+);
 app.use('/auth', authRoutes);
 
 app.use((error, req, res, next) => {
@@ -43,7 +46,6 @@ app.use((error, req, res, next) => {
     const data = error.data;
     res.status(status).json({ message: message, data: data });
 });
-
 
 mongoose.connect('mongodb://127.0.0.1:27017/disposable_shop').then(() => {
     console.log('Connected To DB');

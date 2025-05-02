@@ -1,80 +1,64 @@
 const Order = require('../models/order');
 const Product = require('../models/product');
-const { calculateDiscountAmount, validateDiscountCode } = require('../services/discountService');
+const { calculateTotals } = require('../utils/cartUtils');
 const ZarinpalCheckout = require('zarinpal-checkout');
-let zarinpal = ZarinpalCheckout.create('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', true);
 
-exports.getOrders = async (req, res, next) => {
-    try {
-        const orderList = await Order.find({ 'user.userId': req.user._id, });
-        console.log(orderList)
-        res.status(200).json({
-            meaasge: 'Order list fetched successfully!',
-            orders: orderList
-        });
-        console.log(orders);
-    } catch (error) {
-        if (!error.statusCode) {
-            error.statusCode = 500;
-        }
-        next(error)
-    }
-}
+var zarinpal = ZarinpalCheckout.create('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', true);
 
-exports.postOrder = async (req, res, next) => {
+exports.createOrder = async (req, res, next) => {
     try {
-        const additionalComment = req.body.additionalComment || '';
         const user = req.user;
+        const cartItems = user.cart.items;
+        const { shippingAddress, additionalComment = '' } = req.body;
 
-        await user.populate('cart.items.productId');
-
-        const cartItems = user.cart.items.map(item => ({
-            product: { ...item.productId._doc },
-            quantity: item.quantity,
-        }));
-
-        let total = cartItems.reduce((acc, item) => acc + item.quantity * item.product.price, 0);
-
-
-        const discountCode = req.body.discountCode;
-        let discountAmount = 0;
-
-        if (discountCode) {
-            const discount = await validateDiscountCode(discountCode);
-            if (discount) {
-                discountAmount = calculateDiscountAmount(total, discount);
-                total -= discountAmount;
-            } else {
-                return res.status(400).json({ message: 'Invalid or expired discount code.' });
-            }
+        if (cartItems.length === 0) {
+            const error = new Error('Cart is empty!');
+            error.statusCode = 400;
+            throw error;
         }
+
+        const orderItems = [];
+
+        for (const item of cartItems) {
+            const product = await Product.findById(item.productId);
+            if (!product) {
+                return res.status(404).json({
+                    message: `Product not found for ID: ${item.productId}`
+                });
+            }
+            orderItems.push({
+                product: {
+                    title: product.title,
+                    price: product.price,
+                    imageUrl: product.imageUrl,
+                    productCode: product.productCode,
+                    weight: product.weight,
+                    size: product.size,
+                    category: product.category,
+                    color: product.color,
+                    tag: product.tag,
+                    rating: product.rating,
+                },
+                quantity: item.quantity
+            });
+        }
+
+        const totals = calculateTotals(orderItems);
 
         const order = new Order({
             user: {
                 userId: user._id,
                 name: user.name
             },
-            cart: {
-                items: cartItems
-            },
-            total: total,
-            discount: {
-                code: discountCode,
-                amount: discountAmount
-            },
-            additionalComment: additionalComment
+            items: orderItems,
+            shippingAddress: shippingAddress,
+            additionalComment: additionalComment,
+            totalPrice: totals.totalPrice,
+            totalQuantity: totals.totalQuantity,
+            formattedPrice: totals.formattedPrice,
         });
 
         await order.save();
-
-        // Increment sales count for each product
-        for (const item of cartItems) {
-            await Product.updateOne(
-                { _id: item.product._id },
-                { $inc: { salesCount: item.quantity } }
-            );
-        }
-
         user.cart.items = [];
         await user.save();
 
@@ -89,22 +73,32 @@ exports.postOrder = async (req, res, next) => {
         }
         next(error);
     }
-};
+}
 
-exports.getSingleOrder = async (req, res, next) => {
+exports.getUserOrders = async (req, res, next) => {
     try {
-        const orderId = req.params.orderId;
-        const order = await Order.findById(orderId);
+        const userId = req.user._id;
+        const orders = await Order.find({ "user.userId": userId }).populate('items.product');
 
-        if (!order) {
-            const error = new Error('order not found!');
+        if (!orders || orders.length === 0) {
+            const error = new Error('no Orders found for this user!');
             error.statusCode = 404;
             throw error;
         }
 
         res.status(200).json({
-            message: 'order fetched successfully!',
-            order: order
+            message: "Orders fetched successfully!",
+            orders: orders.map(order => ({
+                id: order._id,
+                items: order.items,
+                totalPrice: order.totalPrice,
+                totalQuantity: order.totalQuantity,
+                formattedPrice: order.formattedPrice,
+                shippingAddress: order.shippingAddress,
+                additionalComment: order.additionalComment,
+                status: order.status,
+                createdAt: order.createdAt,
+            })),
         });
 
     } catch (error) {
@@ -115,54 +109,35 @@ exports.getSingleOrder = async (req, res, next) => {
     }
 }
 
-// Checkout Endpoint's
-
-exports.getPayment = async (req, res, next) => {
+exports.getCheckoutDetails = async (req, res, next) => {
     try {
         const orderId = req.params.orderId;
-        if (!orderId) {
-            const error = new Error('Order ID is required!');
-            error.statusCode = 400;
-            throw error;
-        }
+        const userId = req.user._id;
 
-        const order = await Order.findById(orderId);
+        const order = await Order.findOne({ _id: orderId, "user.userId": userId }).populate("items.product");
+
         if (!order) {
             const error = new Error('Order not found!');
             error.statusCode = 404;
             throw error;
         }
 
-        if (order.user.userId.toString() !== req.user._id.toString()) {
-            const error = new Error('Unauthorized user to make payment for this order!');
-            error.statusCode = 403;
-            throw error;
-        };
-
-        const amount = order.total;
-        const callbackURL = `http://localhost:3000/checkPayment/${orderId}`;
-        const description = 'تست اتصال به درگاه پرداخت';
-        // const description = `Payment for Order ID: ${orderId}`;
-
-        const response = await zarinpal.PaymentRequest({
-            Amount: amount,
-            CallbackURL: callbackURL,
-            Description: description,
-            Email: req.user.email,
-            Mobile: req.user.phone,
+        res.status(200).json({
+            message: "Checkout details fetched successfully!",
+            order: {
+                id: order._id,
+                items: order.items,
+                totalPrice: order.totalPrice,
+                totalQuantity: order.totalQuantity,
+                formattedPrice: order.formattedPrice,
+                shippingAddress: order.shippingAddress,
+                additionalComment: order.additionalComment,
+                status: order.status,
+                createdAt: order.createdAt,
+            }
         });
 
-        if (response.status === 100) {
-            console.log(response);
-            res.json({
-                paymentUrl: response.url
-            });
-        } else {
-            res.status(500).json({ message: 'Failed to create payment request.' });
-        }
-
     } catch (error) {
-        console.error(error);
         if (!error.statusCode) {
             error.statusCode = 500;
         }
@@ -170,74 +145,117 @@ exports.getPayment = async (req, res, next) => {
     }
 }
 
-exports.checkPayment = async (req, res, next) => {
-    const authority = req.query.Authority;
-    const status = req.query.Status;
-    const orderId = req.params.orderId;
+// Payment Gate (Zarinpal)
 
-    const order = await Order.findById(orderId);
+exports.getPaymentRequest = async (req, res, next) => {
+    try {
+        const orderId = req.params.orderId;
+        const userId = req.user._id;
 
-    if (!order) {
-        return res.status(404).json({ message: 'Order not found!' });
-    }
+        const order = await Order.findOne({ _id: orderId, "user.userId": userId });
 
-    if (status == 'OK') {
-        zarinpal.PaymentVerification({
-            Amount: order.total,
-            Authority: authority
-        }).then((response) => {
-            console.log(response)
+        if (!order) {
+            const error = new Error('Order not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const paymentAmount = order.totalPrice;
+
+        const response = await zarinpal.PaymentRequest({
+            Amount: paymentAmount,
+            CallbackURL: "http://localhost:3000/payment-confirmation",
+            Description: `Payment for Order #${orderId}`,
+            Email: req.user.email,
+            Mobile: req.user.phone,
         });
+
+        // console.log(response);
+
+        if (response.status === 100) {
+            res.status(200).json({
+                message: 'Payment request created successfully!',
+                paymentUrl: response.url,
+            });
+        } else {
+            const error = new Error('Failed to create payment request!');
+            error.statusCode = 500;
+            throw error;
+        }
+
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
     }
-};
+}
 
-// ============================================ //
+exports.getPaymentConfirmation = async (req, res, next) => {
+    try {
+        console.log('Payment confirmation endpoint called!');
+        const { Authority, Status } = req.query;
 
-// This two endpoint are not complete 
+        // console.log('Authority:', Authority);
+        // console.log('Status:', Status);
 
-// exports.updateOrderStatus = async (req, res, next) => {
-//     try {
-//         const errors = validationResult(req);
+        if (Status !== 'OK') {
+            // console.log('Payment status is NOT OK');
+            return res.status(400).json({
+                message: "Payment was NOT successful!",
+                status: Status,
+            });
+        }
 
-//         if (!errors.isEmpty()) {
-//             return res.status(422).json({
-//                 message: 'Validation failed! Your entered data is invalid!',
-//                 errors: errors.array(),
-//             });
-//         }
+        const userId = req.user._id;
+        // console.log('User ID:', userId);
+        const order = await Order.findOne({ "user.userId": userId, status: 'Pending' });
 
-//         const orderId = req.params.orderId;
-//         const newStatus = req.body.status;
 
-//         const order = await Order.findById(orderId);
+        if (!order) {
+            // console.log('Order not found or already processed!');
+            return res.status(404).json({
+                message: 'Order not found or already processed!',
+            });
+        }
 
-//         if(!order) {
-//             const error = new Error('Order not found!');
-//             error.statusCode = 404;
-//             throw error
-//         }
+        // console.log('Order found:', order);
 
-//         order.status = newStatus;
-//         await order.save();
+        const paymentAmount = order.totalPrice;
+        const response = await zarinpal.PaymentVerification({
+            Amount: paymentAmount,
+            Authority: Authority,
+        });
+        // console.log('Payment Verification Response:', response);
 
-//         res.status(200).json({
-//             message : 'Order status updated successfully!',
-//             order : order
-//         });
+        if (response.status === 100) {
+            console.log('Payment verified:', response);
+            order.status = 'Paid';
+            await order.save();
 
-        
-//     } catch (error) {
-//         if(!error.statusCode) {
-//             error.statusCode = 500;
-//         }
-//         next(error);
-//     }
-// }
+            return res.status(200).json({
+                message: 'Payment was successful!',
+                status: response.status,
+                order: {
+                    id: order._id,
+                    totalPrice: order.totalPrice,
+                    totalQuantity: order.totalQuantity,
+                    formattedPrice: order.formattedPrice,
+                },
+            });
+        } else {
+            console.log('Payment verification failed:', response);
+            return res.status(400).json({
+                message: 'Payment verification failed!',
+                status: response.status,
+            });
+        }
 
-// exports.cancelOrder = async (req, res, next) => {
-//     try {
 
-//     } catch (error) {
-        
-//     }
-// }
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}

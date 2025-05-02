@@ -24,6 +24,6 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.0",
     "nodemon": "^3.1.0",
-    "zarinpal-checkout": "^0.2.8"
+    "zarinpal-checkout": "^0.3.0"
   }
 }
