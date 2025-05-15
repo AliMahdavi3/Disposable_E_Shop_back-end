@@ -19,10 +19,6 @@ const discountSchema = new Schema({
         type: Boolean,
         default: true
     },
-    applicableTo: {
-        type: [String], // Array of product IDs that this discount applies to
-        required: false
-    }
 }, {
     timestamps: true
 });

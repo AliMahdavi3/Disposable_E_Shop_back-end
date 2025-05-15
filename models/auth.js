@@ -62,7 +62,17 @@ const userSchema = new Schema({
                 type: Number,
                 required: true
             }
-        }]
+        }],
+        appliedDiscount: {
+            code: {
+                type: String,
+                required: false
+            },
+            percentage: {
+                type: Number,
+                required: false
+            }
+        },
     },
     favorites: [{
         type: Schema.Types.ObjectId,

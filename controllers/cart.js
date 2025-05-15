@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const Product = require('../models/product');
-const { calculateTotals } = require('../utils/cartUtils');
+const { calculateTotals, formatPrice } = require('../utils/cartUtils');
 const path = require('path');
 const util = require('util');
 const fs = require('fs');
@@ -52,12 +52,24 @@ exports.getCart = async (req, res, next) => {
 
         const { totalPrice, totalQuantity, formattedPrice } = calculateTotals(cartItems);
 
+        const appliedDiscount = req.user.cart.appliedDiscount;
+        let discountedPrice = totalPrice;
+        let formattedDiscountedPrice = formattedPrice;
+        if (appliedDiscount) {
+            const discountAmount = (totalPrice * appliedDiscount.percentage) / 100;
+            discountedPrice = totalPrice - discountAmount;
+            formattedDiscountedPrice = formatPrice(discountedPrice);
+        }
+
         res.status(200).json({
             message: 'Fetched cart successfully!',
             cart: cartItems,
             totalPrice: totalPrice,
             formattedPrice: formattedPrice,
             totalQuantity: totalQuantity,
+            appliedDiscount: appliedDiscount || null,
+            discountedPrice: discountedPrice,
+            formattedDiscountedPrice: formattedDiscountedPrice,
         });
 
     } catch (error) {

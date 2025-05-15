@@ -2,6 +2,7 @@ const Order = require('../models/order');
 const Product = require('../models/product');
 const { calculateTotals } = require('../utils/cartUtils');
 const ZarinpalCheckout = require('zarinpal-checkout');
+require('dotenv').config();
 
 var zarinpal = ZarinpalCheckout.create('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', true);
 
@@ -81,15 +82,16 @@ exports.getUserOrders = async (req, res, next) => {
         const orders = await Order.find({ "user.userId": userId }).populate('items.product');
 
         if (!orders || orders.length === 0) {
-            const error = new Error('no Orders found for this user!');
-            error.statusCode = 404;
-            throw error;
+            return res.status(200).json({
+                message: "No orders found for this user.",
+                orders: [],
+            });
         }
 
         res.status(200).json({
             message: "Orders fetched successfully!",
             orders: orders.map(order => ({
-                id: order._id,
+                _id: order._id,
                 items: order.items,
                 totalPrice: order.totalPrice,
                 totalQuantity: order.totalQuantity,
@@ -152,6 +154,12 @@ exports.getPaymentRequest = async (req, res, next) => {
         const orderId = req.params.orderId;
         const userId = req.user._id;
 
+        if (!req.user.email || !req.user.phone) {
+            const error = new Error('User email or phone is missing! Payment request cannot be created.');
+            error.statusCode = 400;
+            throw error;
+        }
+
         const order = await Order.findOne({ _id: orderId, "user.userId": userId });
 
         if (!order) {
@@ -161,22 +169,27 @@ exports.getPaymentRequest = async (req, res, next) => {
         }
 
         const paymentAmount = order.totalPrice;
+        const callbackUrl = "http://localhost:3000/payment-confirmation";
 
         const response = await zarinpal.PaymentRequest({
             Amount: paymentAmount,
-            CallbackURL: "http://localhost:3000/payment-confirmation",
+            CallbackURL: callbackUrl,
             Description: `Payment for Order #${orderId}`,
             Email: req.user.email,
             Mobile: req.user.phone,
         });
 
-        // console.log(response);
+        console.log(response);
 
         if (response.status === 100) {
+            order.paymentAuthority = response.authority;
+            await order.save();
+
             res.status(200).json({
                 message: 'Payment request created successfully!',
                 paymentUrl: response.url,
             });
+
         } else {
             const error = new Error('Failed to create payment request!');
             error.statusCode = 500;
@@ -193,40 +206,48 @@ exports.getPaymentRequest = async (req, res, next) => {
 
 exports.getPaymentConfirmation = async (req, res, next) => {
     try {
-        console.log('Payment confirmation endpoint called!');
         const { Authority, Status } = req.query;
 
-        // console.log('Authority:', Authority);
-        // console.log('Status:', Status);
+        console.log('Authority:', Authority);
+        console.log('Status:', Status);
 
         if (Status !== 'OK') {
-            // console.log('Payment status is NOT OK');
             return res.status(400).json({
-                message: "Payment was NOT successful!",
+                message: `Payment faild with status ${Status}`,
                 status: Status,
             });
         }
 
         const userId = req.user._id;
-        // console.log('User ID:', userId);
-        const order = await Order.findOne({ "user.userId": userId, status: 'Pending' });
-
+        const order = await Order.findOne({ paymentAuthority: Authority, "user.userId": userId });
 
         if (!order) {
-            // console.log('Order not found or already processed!');
-            return res.status(404).json({
-                message: 'Order not found or already processed!',
-            });
+            const error = new Error('Order not found or already processed!');
+            error.statusCode = 404;
+            throw error;
         }
 
-        // console.log('Order found:', order);
+        if (order.status === 'Paid') {
+            console.log('Order is already paid:', order);
+            return res.status(200).json({
+                message: 'Payment was already verified!',
+                status: 101,
+                authority: Authority,
+                order: {
+                    id: order._id,
+                    totalPrice: order.totalPrice,
+                    totalQuantity: order.totalQuantity,
+                    formattedPrice: order.formattedPrice,
+                },
+            });
+        }
 
         const paymentAmount = order.totalPrice;
         const response = await zarinpal.PaymentVerification({
             Amount: paymentAmount,
             Authority: Authority,
         });
-        // console.log('Payment Verification Response:', response);
+        console.log('Zarinpal Payment Verification Response:', response);
 
         if (response.status === 100) {
             console.log('Payment verified:', response);
@@ -236,6 +257,21 @@ exports.getPaymentConfirmation = async (req, res, next) => {
             return res.status(200).json({
                 message: 'Payment was successful!',
                 status: response.status,
+                authority: Authority,
+                order: {
+                    id: order._id,
+                    totalPrice: order.totalPrice,
+                    totalQuantity: order.totalQuantity,
+                    formattedPrice: order.formattedPrice,
+                },
+            });
+
+        } else if (response.status === 101) {
+            console.log('Payment already verified:', response);
+            return res.status(200).json({
+                message: 'Payment was already verified!',
+                status: response.status,
+                authority: Authority,
                 order: {
                     id: order._id,
                     totalPrice: order.totalPrice,
@@ -249,8 +285,8 @@ exports.getPaymentConfirmation = async (req, res, next) => {
                 message: 'Payment verification failed!',
                 status: response.status,
             });
-        }
 
+        }
 
     } catch (error) {
         if (!error.statusCode) {

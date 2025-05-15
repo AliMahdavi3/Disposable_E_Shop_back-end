@@ -46,6 +46,10 @@ const orderSchema = new Schema({
     formattedPrice: {
         type: String,
         required: true
+    },
+    paymentAuthority: {
+        type: String,
+        required: false
     }
 }, {
     timestamps: true,
