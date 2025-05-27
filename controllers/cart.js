@@ -53,12 +53,23 @@ exports.getCart = async (req, res, next) => {
         const { totalPrice, totalQuantity, formattedPrice } = calculateTotals(cartItems);
 
         const appliedDiscount = req.user.cart.appliedDiscount;
-        let discountedPrice = totalPrice;
-        let formattedDiscountedPrice = formattedPrice;
-        if (appliedDiscount) {
-            const discountAmount = (totalPrice * appliedDiscount.percentage) / 100;
+        let discountedPrice = null;
+        let formattedDiscountedPrice = null;
+        let discountAmount = null;
+        let formattedDiscountAmount = null;
+
+        const discountDetails = (appliedDiscount && appliedDiscount.discountCode && appliedDiscount.percentage)
+            ? {
+                discountCode: appliedDiscount.discountCode,
+                percentage: appliedDiscount.percentage,
+            }
+            : null;
+
+        if (discountDetails) {
+            discountAmount = (totalPrice * appliedDiscount.percentage) / 100;
             discountedPrice = totalPrice - discountAmount;
             formattedDiscountedPrice = formatPrice(discountedPrice);
+            formattedDiscountAmount = formatPrice(discountAmount);
         }
 
         res.status(200).json({
@@ -67,13 +78,14 @@ exports.getCart = async (req, res, next) => {
             totalPrice: totalPrice,
             formattedPrice: formattedPrice,
             totalQuantity: totalQuantity,
-            appliedDiscount: appliedDiscount || null,
+            appliedDiscount: discountDetails,
             discountedPrice: discountedPrice,
             formattedDiscountedPrice: formattedDiscountedPrice,
+            discountAmount: discountAmount,
+            formattedDiscountAmount: formattedDiscountAmount,
         });
 
     } catch (error) {
-
         if (!error.statusCode) {
             error.statusCode = 500;
         }
@@ -102,6 +114,11 @@ exports.updatingCartProductQuantity = async (req, res, next) => {
         });
 
         const { totalPrice, totalQuantity, formattedPrice } = calculateTotals(updatedCartItems);
+
+        if (updatedCartItems.length === 0) {
+            req.user.cart.appliedDiscount = null;
+            await req.user.save();
+        }
 
         res.status(200).json({
             message: 'Cart updated successfully!',
@@ -133,6 +150,11 @@ exports.deleteProductFromCart = async (req, res, next) => {
         });
 
         const { totalPrice, totalQuantity, formattedPrice } = calculateTotals(updatedCartItems);
+
+        if (updatedCartItems.length === 0) {
+            req.user.cart.appliedDiscount = null;
+            await req.user.save();
+        }
 
         res.status(200).json({
             message: 'Product deleted from cart successfully!',

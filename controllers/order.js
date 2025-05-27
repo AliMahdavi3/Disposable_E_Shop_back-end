@@ -1,6 +1,6 @@
 const Order = require('../models/order');
 const Product = require('../models/product');
-const { calculateTotals } = require('../utils/cartUtils');
+const { calculateTotals, formatPrice } = require('../utils/cartUtils');
 const ZarinpalCheckout = require('zarinpal-checkout');
 require('dotenv').config();
 
@@ -10,6 +10,7 @@ exports.createOrder = async (req, res, next) => {
     try {
         const user = req.user;
         const cartItems = user.cart.items;
+        const appliedDiscount = user.cart.appliedDiscount || null;
         const { shippingAddress, additionalComment = '' } = req.body;
 
         if (cartItems.length === 0) {
@@ -46,6 +47,15 @@ exports.createOrder = async (req, res, next) => {
 
         const totals = calculateTotals(orderItems);
 
+        let discountAmount = 0;
+        let discountedPrice = totals.totalPrice;
+        let formattedDiscountedPrice = totals.formattedPrice;
+        if (appliedDiscount && appliedDiscount.percentage) {
+            discountAmount = (totals.totalPrice * appliedDiscount.percentage) / 100;
+            discountedPrice = totals.totalPrice - discountAmount;
+            formattedDiscountedPrice = formatPrice(discountedPrice);
+        }
+
         const order = new Order({
             user: {
                 userId: user._id,
@@ -55,12 +65,26 @@ exports.createOrder = async (req, res, next) => {
             shippingAddress: shippingAddress,
             additionalComment: additionalComment,
             totalPrice: totals.totalPrice,
-            totalQuantity: totals.totalQuantity,
             formattedPrice: totals.formattedPrice,
+            totalQuantity: totals.totalQuantity,
+            discountedPrice: appliedDiscount ? discountedPrice : totals.totalPrice,
+            formattedDiscountedPrice: appliedDiscount ? formattedDiscountedPrice : totals.formattedPrice,
+            discount: appliedDiscount
+                ? {
+                    discountCode: appliedDiscount.discountCode,
+                    percentage: appliedDiscount.percentage,
+                    amount: discountAmount,
+                }
+                : {
+                    discountCode: null,
+                    percentage: 0,
+                    amount: 0,
+                },
         });
 
         await order.save();
         user.cart.items = [];
+        user.cart.appliedDiscount = null;
         await user.save();
 
         res.status(201).json({
@@ -92,14 +116,19 @@ exports.getUserOrders = async (req, res, next) => {
             message: "Orders fetched successfully!",
             orders: orders.map(order => ({
                 _id: order._id,
+                user: order.user,
                 items: order.items,
                 totalPrice: order.totalPrice,
-                totalQuantity: order.totalQuantity,
                 formattedPrice: order.formattedPrice,
+                totalQuantity: order.totalQuantity,
+                discountedPrice: order.discountedPrice || order.totalPrice,
+                formattedDiscountedPrice: order.formattedDiscountedPrice || order.formattedPrice,
+                discount: order.discount || { amount: 0 },
                 shippingAddress: order.shippingAddress,
                 additionalComment: order.additionalComment,
                 status: order.status,
                 createdAt: order.createdAt,
+                updatedAt: order.updatedAt,
             })),
         });
 
@@ -128,14 +157,19 @@ exports.getCheckoutDetails = async (req, res, next) => {
             message: "Checkout details fetched successfully!",
             order: {
                 id: order._id,
+                user: order.user,
                 items: order.items,
                 totalPrice: order.totalPrice,
-                totalQuantity: order.totalQuantity,
                 formattedPrice: order.formattedPrice,
+                totalQuantity: order.totalQuantity,
+                discountedPrice: order.discountedPrice || order.totalPrice,
+                formattedDiscountedPrice: order.formattedDiscountedPrice || order.formattedPrice,
+                discount: order.discount || { amount: 0 },
                 shippingAddress: order.shippingAddress,
                 additionalComment: order.additionalComment,
                 status: order.status,
                 createdAt: order.createdAt,
+                updatedAt: order.updatedAt,
             }
         });
 
@@ -167,9 +201,8 @@ exports.getPaymentRequest = async (req, res, next) => {
             error.statusCode = 404;
             throw error;
         }
-
-        const paymentAmount = order.totalPrice;
-        const callbackUrl = "http://localhost:3000/payment-confirmation";
+        const paymentAmount = order.discountedPrice || order.totalPrice;
+        const callbackUrl = process.env.PAYMENT_CALLBACK_URL;
 
         const response = await zarinpal.PaymentRequest({
             Amount: paymentAmount,
@@ -188,6 +221,14 @@ exports.getPaymentRequest = async (req, res, next) => {
             res.status(200).json({
                 message: 'Payment request created successfully!',
                 paymentUrl: response.url,
+                authority: response.authority,
+                order: {
+                    _id: order._id,
+                    totalPrice: order.totalPrice,
+                    formattedPrice: order.formattedPrice,
+                    discountedPrice: order.discountedPrice || order.totalPrice,
+                    formattedDiscountedPrice: order.formattedDiscountedPrice || order.formattedPrice,
+                },
             });
 
         } else {
@@ -234,15 +275,18 @@ exports.getPaymentConfirmation = async (req, res, next) => {
                 status: 101,
                 authority: Authority,
                 order: {
+                    refId: order.refId || null,
+                    cardPan: order.cardPan || null,
+                    fee: order.fee || null,
                     id: order._id,
                     totalPrice: order.totalPrice,
-                    totalQuantity: order.totalQuantity,
                     formattedPrice: order.formattedPrice,
+                    discountedPrice: order.discountedPrice || order.totalPrice,
+                    formattedDiscountedPrice: order.formattedDiscountedPrice || order.formattedPrice,
                 },
             });
         }
-
-        const paymentAmount = order.totalPrice;
+        const paymentAmount = order.discountedPrice || order.totalPrice;
         const response = await zarinpal.PaymentVerification({
             Amount: paymentAmount,
             Authority: Authority,
@@ -252,6 +296,9 @@ exports.getPaymentConfirmation = async (req, res, next) => {
         if (response.status === 100) {
             console.log('Payment verified:', response);
             order.status = 'Paid';
+            order.refId = response.refId;
+            order.cardPan = response.cardPan;
+            order.fee = response.fee;
             await order.save();
 
             return res.status(200).json({
@@ -261,8 +308,12 @@ exports.getPaymentConfirmation = async (req, res, next) => {
                 order: {
                     id: order._id,
                     totalPrice: order.totalPrice,
-                    totalQuantity: order.totalQuantity,
                     formattedPrice: order.formattedPrice,
+                    discountedPrice: order.discountedPrice || order.totalPrice,
+                    formattedDiscountedPrice: order.formattedDiscountedPrice || order.formattedPrice,
+                    refId: order.refId,
+                    cardPan: order.cardPan,
+                    fee: order.fee,
                 },
             });
 
@@ -275,8 +326,12 @@ exports.getPaymentConfirmation = async (req, res, next) => {
                 order: {
                     id: order._id,
                     totalPrice: order.totalPrice,
-                    totalQuantity: order.totalQuantity,
                     formattedPrice: order.formattedPrice,
+                    discountedPrice: order.discountedPrice || order.totalPrice,
+                    formattedDiscountedPrice: order.formattedDiscountedPrice || order.formattedPrice,
+                    refId: order.refId,
+                    cardPan: order.cardPan,
+                    fee: order.fee,
                 },
             });
         } else {
@@ -285,9 +340,7 @@ exports.getPaymentConfirmation = async (req, res, next) => {
                 message: 'Payment verification failed!',
                 status: response.status,
             });
-
         }
-
     } catch (error) {
         if (!error.statusCode) {
             error.statusCode = 500;

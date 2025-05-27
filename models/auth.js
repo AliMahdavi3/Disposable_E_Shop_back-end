@@ -64,7 +64,7 @@ const userSchema = new Schema({
             }
         }],
         appliedDiscount: {
-            code: {
+            discountCode: {
                 type: String,
                 required: false
             },

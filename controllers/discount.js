@@ -5,10 +5,10 @@ const { calculateTotals, formatPrice } = require('../utils/cartUtils');
 
 exports.createDiscountCode = async (req, res, next) => {
     try {
-        const { code, percentage, expiresAt } = req.body;
+        const { discountCode, percentage, expiresAt } = req.body;
 
         const discount = new Discount({
-            code,
+            discountCode,
             percentage,
             expiresAt,
         });
@@ -29,15 +29,15 @@ exports.createDiscountCode = async (req, res, next) => {
 
 exports.applyDiscount = async (req, res, next) => {
     try {
-        const { code } = req.body;
+        const { discountCode } = req.body;
 
-        if (!code) {
+        if (!discountCode) {
             const error = new Error('Discount code is required!');
             error.statusCode = 400;
             throw error;
         }
 
-        const discount = await Discount.findOne({ code });
+        const discount = await Discount.findOne({ discountCode });
 
         if (!discount) {
             const error = new Error('Invalid discount code!');
@@ -70,9 +70,10 @@ exports.applyDiscount = async (req, res, next) => {
         const discountAmount = (totalPrice * discount.percentage) / 100;
         const discountedPrice = totalPrice - discountAmount;
         const formattedDiscountedPrice = formatPrice(discountedPrice);
+        const formattedDiscountedAmount = formatPrice(discountAmount);
 
         req.user.cart.appliedDiscount = {
-            code: discount.code,
+            discountCode: discount.discountCode,
             percentage: discount.percentage,
         };
 
@@ -81,16 +82,18 @@ exports.applyDiscount = async (req, res, next) => {
         res.status(200).json({
             message: 'Discount applied successfully!',
             discount: {
-                code: discount.code,
+                discountCode: discount.discountCode,
                 percentage: discount.percentage,
             },
             cart: {
                 items: cartItems,
+                totalQuantity: totalQuantity,
                 originalTotalPrice: totalPrice,
                 originalFormattedPrice: formattedPrice,
-                totalQuantity: totalQuantity,
                 discountedTotalPrice: discountedPrice,
                 formattedDiscountedPrice: formattedDiscountedPrice,
+                discountAmount: discountAmount,
+                formattedDiscountedAmount: formattedDiscountedAmount,
             }
         });
 
@@ -144,7 +147,6 @@ exports.getSingleDiscountCode = async (req, res, next) => {
 
 exports.updateDiscountCode = async (req, res, next) => {
     try {
-
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             const error = new Error('Validation failed, entered data is incorrect');
@@ -154,26 +156,26 @@ exports.updateDiscountCode = async (req, res, next) => {
         }
 
         const discountId = req.params.discountId;
-        const { code, percentage, isActive, expiresAt } = req.body;
+        const { discountCode, percentage, isActive, expiresAt } = req.body;
 
-        const discountCode = await Discount.findById(discountId);
+        const disCode = await Discount.findById(discountId);
 
-        if (!discountCode) {
+        if (!disCode) {
             const error = new Error('Could not find discount code');
             error.statusCode = 404;
             throw error;
         }
 
-        if (code) discountCode.code = code;
-        if (percentage) discountCode.percentage = percentage;
-        if (typeof isActive !== 'undefined') discountCode.isActive = isActive;
-        if (expiresAt) discountCode.expiresAt = expiresAt;
+        if (discountCode) disCode.discountCode = discountCode;
+        if (percentage) disCode.percentage = percentage;
+        if (typeof isActive !== 'undefined') disCode.isActive = isActive;
+        if (expiresAt) disCode.expiresAt = expiresAt;
 
-        await discountCode.save();
+        await disCode.save();
 
         res.status(200).json({
             message: 'Discount code updated successfully!',
-            discountCode: discountCode
+            disCode: disCode
         });
 
     } catch (error) {
@@ -188,9 +190,9 @@ exports.updateDiscountCode = async (req, res, next) => {
 exports.deleteDiscountCode = async (req, res, next) => {
     try {
         const discountId = req.params.discountId;
-        const discountCode = await Discount.findById(discountId);
+        const disCode = await Discount.findById(discountId);
 
-        if (!discountCode) {
+        if (!disCode) {
             const error = new Error('could not find Discount Code!');
             error.statusCode = 404;
             throw error;
@@ -200,7 +202,7 @@ exports.deleteDiscountCode = async (req, res, next) => {
 
         res.status(200).json({
             message: 'Discount Code deleted successfully!',
-            discountCode: deletedDiscountCode
+            disCode: deletedDiscountCode
         });
 
     } catch (error) {

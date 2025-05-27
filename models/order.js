@@ -39,16 +39,50 @@ const orderSchema = new Schema({
         type: Number,
         required: true
     },
-    totalQuantity: {
-        type: Number,
-        required: true
-    },
     formattedPrice: {
         type: String,
         required: true
     },
+    totalQuantity: {
+        type: Number,
+        required: true
+    },
+    discountedPrice: {
+        type: Number,
+        required: false
+    },
+    formattedDiscountedPrice: {
+        type: String,
+        required: false
+    },
+    discount: {
+        discountCode: {
+            type: String,
+            required: false
+        },
+        percentage: {
+            type: Number,
+            required: false
+        },
+        amount: {
+            type: Number,
+            required: false
+        },
+    },
     paymentAuthority: {
         type: String,
+        required: false
+    },
+    refId: {
+        type: Number,
+        required: false
+    },
+    cardPan: {
+        type: String,
+        required: false
+    },
+    fee: {
+        type: Number,
         required: false
     }
 }, {

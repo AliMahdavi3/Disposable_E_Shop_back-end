@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const discountSchema = new Schema({
-    code: {
+    discountCode: {
         type: String,
         required: true,
         unique: true
@@ -24,5 +24,3 @@ const discountSchema = new Schema({
 });
 
 module.exports = mongoose.model('Discount', discountSchema);
-
-
