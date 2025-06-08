@@ -37,6 +37,17 @@ const ticketToSupportSchema = new Schema({
         enum: ['open', 'in_progress', 'resolved', 'closed', 'on_hold'],
         default: 'open'
     },
+    responses: [{
+        responderId: {
+            type: Schema.Types.ObjectId,
+            ref: 'User',
+            required: true,
+        },
+        responseMessage: {
+            type: String,
+            required: false,
+        },
+    }]
 }, {
     timestamps: true
 });

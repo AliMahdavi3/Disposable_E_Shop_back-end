@@ -26,8 +26,10 @@ const upload = multer({
     fileFilter: fileFilter,
 });
 
-router.get('/tickets', authenticate, ticketsControllers.getAllTickets);
 router.post('/ticket', authenticate, upload.array('image', 5), ticketsControllers.createTicket);
+router.get('/user-tickets', authenticate, ticketsControllers.getAllTicketsForEachUser);
+router.get('/all-tickets', authenticate, ticketsControllers.getAllTickets);
+router.post('/tickets/:ticketId/respond', authenticate, ticketsControllers.respondToTicket);
 router.get('/tickets/:ticketId', authenticate, ticketsControllers.getSingleTicket);
 router.put('/tickets/:ticketId', authenticate, upload.array('image', 5), ticketsControllers.updateTicket);
 router.delete('/tickets/:ticketId', authenticate, ticketsControllers.deleteTicket);

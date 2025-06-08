@@ -15,7 +15,7 @@ exports.createTicket = async (req, res, next) => {
             throw error;
         }
 
-        const { name, email, phone, subject, description, userId } = req.body;
+        const { name, email, phone, subject, description } = req.body;
 
         const ticket = new Ticket({
             name: name,
@@ -24,7 +24,6 @@ exports.createTicket = async (req, res, next) => {
             subject: subject,
             description: description,
             status: 'open',
-            // Optional file upload below
             imageUrl: req.files ? req.files.map(file => file.path.replace(/\\/g, '/')) : [],
             userId: req.user._id,
         });
@@ -61,12 +60,74 @@ exports.createTicket = async (req, res, next) => {
     }
 }
 
+exports.respondToTicket = async (req, res, next) => {
+    try {
+        const ticketId = req.params.ticketId;
+        const { responseMessage } = req.body;
+
+        if (!responseMessage || responseMessage.trim() === '') {
+            const error = new Error('Response message cannot be empty!');
+            error.statusCode = 422;
+            throw error;
+        }
+        const ticket = await Ticket.findById(ticketId);
+
+        if (!ticket) {
+            const error = new Error('Ticket not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        ticket.responses.push({
+            responderId: req.user._id,
+            responseMessage: responseMessage,
+        });
+
+        const updatedTicket = await ticket.save();
+
+        await sendEmail({
+            option: {
+                userEmail: ticket.email,
+                subject: "ثبت تیکت",
+                html: `<p>تیکت شما با موفقیت ارسال شد!</p>`
+            },
+        });
+
+        res.status(200).json({
+            message: 'Response added successfully!',
+            ticket: updatedTicket,
+        });
+
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
+exports.getAllTicketsForEachUser = async (req, res, next) => {
+    try {
+        const userId = req.user._id;
+        const ticketList = await Ticket.find({ userId });
+        res.status(200).json({
+            message: "Tickets fetched successfully!",
+            tickets: ticketList,
+        });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+}
+
 exports.getAllTickets = async (req, res, next) => {
     try {
         const ticketList = await Ticket.find();
         res.status(200).json({
-            message: "Tickets fetched successfully!",
-            tickets: ticketList,
+            message: "All Tickets fetched successfully!",
+            tickets: ticketList
         });
     } catch (error) {
         if (!error.statusCode) {
