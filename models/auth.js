@@ -51,6 +51,11 @@ const userSchema = new Schema({
         type: String,
         default: 'New User!'
     },
+    role: {
+        type: String,
+        enum: ['User', 'Admin'],
+        default: 'User',
+    },
     cart: {
         items: [{
             productId: {

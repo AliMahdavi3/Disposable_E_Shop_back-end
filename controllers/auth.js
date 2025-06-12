@@ -19,7 +19,7 @@ exports.register = async (req, res, next) => {
             });
         }
 
-        const { email, phone, name, password, city, address, zipCode, birthDate } = req.body;
+        const { email, phone, name, password, city, address, zipCode, birthDate, role } = req.body;
 
         const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -45,6 +45,7 @@ exports.register = async (req, res, next) => {
             city,
             address,
             zipCode,
+            role,
             password: hashedPassword,
         });
         const result = await user.save();
@@ -322,7 +323,7 @@ exports.editUser = async (req, res, next) => {
         }
 
         const userId = req.params.userId;
-        const { name, email, phone, city, address, zipCode } = req.body;
+        const { name, email, phone, city, address, zipCode, role } = req.body;
 
         const user = await User.findById(userId);
 
@@ -339,6 +340,7 @@ exports.editUser = async (req, res, next) => {
         user.city = city;
         user.address = address;
         user.zipCode = zipCode;
+        user.role = role;
 
         await user.save();
 

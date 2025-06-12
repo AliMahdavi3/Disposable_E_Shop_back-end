@@ -32,10 +32,10 @@ const ticketToSupportSchema = new Schema({
         ref: 'User',
         required: true
     },
-    status: {
+    ticketStatus: {
         type: String,
-        enum: ['open', 'in_progress', 'resolved', 'closed', 'on_hold'],
-        default: 'open'
+        enum: ['Open', 'Closed'],
+        default: 'Open'
     },
     responses: [{
         responderId: {
@@ -44,6 +44,10 @@ const ticketToSupportSchema = new Schema({
             required: true,
         },
         responseMessage: {
+            type: String,
+            required: false,
+        },
+        responderRole: {
             type: String,
             required: false,
         },

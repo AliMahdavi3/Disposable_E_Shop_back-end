@@ -1,10 +1,11 @@
 const { validationResult } = require('express-validator');
 const Ticket = require('../models/ticketToSupport');
+const User = require('../models/auth');
 const path = require('path');
 const util = require('util');
 const fs = require('fs');
 const unlinkAsync = util.promisify(fs.unlink);
-const sendEmail = require('../utils/emailSender');
+// const sendEmail = require('../utils/emailSender');
 
 exports.createTicket = async (req, res, next) => {
     try {
@@ -15,7 +16,7 @@ exports.createTicket = async (req, res, next) => {
             throw error;
         }
 
-        const { name, email, phone, subject, description } = req.body;
+        const { name, email, phone, subject, description, ticketStatus  } = req.body;
 
         const ticket = new Ticket({
             name: name,
@@ -23,25 +24,24 @@ exports.createTicket = async (req, res, next) => {
             phone: phone,
             subject: subject,
             description: description,
-            status: 'open',
+            ticketStatus: ticketStatus,
             imageUrl: req.files ? req.files.map(file => file.path.replace(/\\/g, '/')) : [],
             userId: req.user._id,
         });
         const ticketResults = await ticket.save();
 
-        await sendEmail({
-            option: {
-                userEmail: email,
-                subject: "ثبت تیکت",
-                html: `<p>تیکت شما با موفقیت ارسال شد!</p>`
-            },
-        });
+        // await sendEmail({
+        //     option: {
+        //         userEmail: email,
+        //         subject: "ثبت تیکت",
+        //         html: `<p>تیکت شما با موفقیت ارسال شد!</p>`
+        //     },
+        // });
 
         res.status(201).json({
             message: "Ticket Created Successfully!",
             ticket: ticketResults,
         });
-
 
     } catch (error) {
         if (req.files) {
@@ -78,20 +78,23 @@ exports.respondToTicket = async (req, res, next) => {
             throw error;
         }
 
+        const user = await User.findById(req.user._id);
+
         ticket.responses.push({
             responderId: req.user._id,
+            responderRole: user.role,
             responseMessage: responseMessage,
         });
 
         const updatedTicket = await ticket.save();
 
-        await sendEmail({
-            option: {
-                userEmail: ticket.email,
-                subject: "ثبت تیکت",
-                html: `<p>تیکت شما با موفقیت ارسال شد!</p>`
-            },
-        });
+        // await sendEmail({
+        //     option: {
+        //         userEmail: ticket.email,
+        //         subject: "ثبت تیکت",
+        //         html: `<p>تیکت شما با موفقیت ارسال شد!</p>`
+        //     },
+        // });
 
         res.status(200).json({
             message: 'Response added successfully!',
@@ -172,11 +175,11 @@ exports.updateTicket = async (req, res, next) => {
             throw error;
         }
 
-        const { subject, description, status } = req.body;
+        const { subject, description, ticketStatus } = req.body;
 
         if (subject) ticket.subject = subject;
         if (description) ticket.description = description;
-        if (status) ticket.status = status;
+        if (ticketStatus) ticket.ticketStatus = ticketStatus;
 
         if (req.files && req.files.length > 0) {
             if (ticket.imageUrl && ticket.imageUrl.length > 0) {
