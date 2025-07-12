@@ -25,11 +25,11 @@ router.post('/reset-password', [
     body('password').trim().isLength({ min: 5 }),
 ], authController.resetPassword);
 
-router.get('/user', authenticate, authController.getUser);
 router.get('/users', authenticate, authController.getAllUsers);
 router.post('/user/favorites', authenticate, authController.addToFavorites);
 router.get('/user/favorites', authenticate, authController.getFavorites);
 router.delete('/user/favorites/:productId', authenticate, authController.removeFromFavorites);
+router.get('/user/:userId?', authenticate, authController.getUser);
 router.put('/user/:userId', authenticate, authController.editUser);
 router.delete('/user/:userId', authenticate, authController.deleteUser);
 

@@ -10,7 +10,6 @@ require('dotenv').config();
 exports.register = async (req, res, next) => {
     try {
         const errors = validationResult(req);
-
         if (!errors.isEmpty()) {
             console.log(errors.array());
             return res.status(422).json({
@@ -25,16 +24,16 @@ exports.register = async (req, res, next) => {
 
         let UserEmail = await User.findOne({ email });
         if (UserEmail) {
-            return res.status(409).json({
-                message: 'User with this email already exists.'
-            });
+            const error = new Error("User with this email already exists!");
+            error.statusCode = 409;
+            throw error;
         }
 
         let UserPhone = await User.findOne({ phone });
         if (UserPhone) {
-            return res.status(409).json({
-                message: 'User with this phone number already exists.'
-            });
+            const error = new Error("User with this phone number already exists!");
+            error.statusCode = 409;
+            throw error;
         }
 
         const user = new User({
@@ -72,25 +71,15 @@ exports.register = async (req, res, next) => {
 }
 
 exports.login = async (req, res, next) => {
-
     try {
-
         const { email, phone, password } = req.body;
-
         let user;
-
         if (email) {
-
             user = await User.findOne({ email: new RegExp('^' + email + '$', 'i') });
-
         } else if (phone) {
-
             user = await User.findOne({ phone: phone });
-
         } else {
-
             return res.status(400).json({ message: "Please provide email or phone for login." });
-
         }
 
         if (!user) {
@@ -268,7 +257,6 @@ exports.changePassword = async (req, res, next) => {
 
 exports.getUser = async (req, res, next) => {
     try {
-
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             const error = new Error('Validation Faild!, Your Entered Data is Invalid');
@@ -276,7 +264,7 @@ exports.getUser = async (req, res, next) => {
             throw error;
         }
 
-        const userId = req.user;
+        const userId = req.params.userId || req.user;
         const user = await User.findById(userId).select('-password');
 
         if (!user) {
@@ -286,8 +274,9 @@ exports.getUser = async (req, res, next) => {
         }
 
         res.status(200).json({
+            message: "User fetched successfully!",
             user: user
-        })
+        });
 
     } catch (error) {
         if (!error.statusCode) {
@@ -313,7 +302,6 @@ exports.getAllUsers = async (req, res, next) => {
 }
 
 exports.editUser = async (req, res, next) => {
-
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -323,8 +311,7 @@ exports.editUser = async (req, res, next) => {
         }
 
         const userId = req.params.userId;
-        const { name, email, phone, city, address, zipCode, role } = req.body;
-
+        const { name, email, phone, city, address, zipCode, birthDate, role } = req.body;
         const user = await User.findById(userId);
 
 
@@ -340,6 +327,7 @@ exports.editUser = async (req, res, next) => {
         user.city = city;
         user.address = address;
         user.zipCode = zipCode;
+        user.birthDate = birthDate;
         user.role = role;
 
         await user.save();
