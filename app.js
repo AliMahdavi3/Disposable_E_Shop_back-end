@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const adminRoutes = require('./routes/admin');
 const articleRoutes = require('./routes/article');
 const articleCommentRoutes = require('./routes/articleComment');
 const authRoutes = require('./routes/auth');
@@ -25,6 +26,7 @@ app.use(bodyParser.json());
 
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/api',
+    adminRoutes,
     articleRoutes,
     articleCommentRoutes,
     bannerRoutes,

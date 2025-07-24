@@ -288,7 +288,7 @@ exports.getUser = async (req, res, next) => {
 
 exports.getAllUsers = async (req, res, next) => {
     try {
-        const userList = await User.find().select('-password'); // Exclude the password field
+        const userList = await User.find().select('-password');
         res.status(200).json({
             message: 'Users fetched successfully!',
             users: userList,
@@ -296,6 +296,21 @@ exports.getAllUsers = async (req, res, next) => {
     } catch (error) {
         if (!error.statusCode) {
             error.statusCode = 500
+        }
+        next(error);
+    }
+}
+
+exports.getUsersCount = async (req, res, next) => {
+    try {
+        const userCount = await User.countDocuments();
+        res.status(200).json({
+            message: "Total number of users fetched successfully!",
+            userCount: userCount
+        });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
         }
         next(error);
     }

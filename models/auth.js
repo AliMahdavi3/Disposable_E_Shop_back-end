@@ -65,6 +65,14 @@ const userSchema = new Schema({
             quantity: {
                 type: Number,
                 required: true
+            },
+            dateAdded: {
+                type: Date,
+                required: true
+            },
+            updatedDate: {
+                type: Date,
+                required: true
             }
         }],
         appliedDiscount: {
@@ -95,10 +103,13 @@ userSchema.methods.addToCart = function (product, quantity) {
 
     if (cartProductIndex >= 0) {
         updatedCartItems[cartProductIndex].quantity += quantity;
+        updatedCartItems[cartProductIndex].updatedDate = new Date();
     } else {
         updatedCartItems.push({
             productId: product._id,
-            quantity: quantity
+            quantity: quantity,
+            dateAdded: new Date(),
+            updatedDate: new Date()
         });
     }
 
@@ -114,7 +125,10 @@ userSchema.methods.removeFromCart = function (productId) {
     const updatedCartItems = this.cart.items.filter((item) => {
         return item.productId.toString() !== productId.toString();
     });
-    this.cart.items = updatedCartItems;
+    this.cart.items = updatedCartItems.map(item => ({
+        ...item,
+        updatedDate: new Date(),
+    }));
     return this.save();
 };
 
@@ -130,6 +144,7 @@ userSchema.methods.updateCartProductQuantity = function (productId, newQuantity)
 
     const updatedCartItems = [...this.cart.items];
     updatedCartItems[cartProductIndex].quantity = newQuantity;
+    updatedCartItems[cartProductIndex].updatedDate = new Date();
 
     this.cart.items = updatedCartItems;
     return this.save();

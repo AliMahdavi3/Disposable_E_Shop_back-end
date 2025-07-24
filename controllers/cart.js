@@ -1,5 +1,6 @@
 const { validationResult } = require('express-validator');
 const Product = require('../models/product');
+const User = require('../models/auth');
 const { calculateTotals, formatPrice } = require('../utils/cartUtils');
 const path = require('path');
 const util = require('util');
@@ -42,17 +43,27 @@ exports.postCart = async (req, res, next) => {
 
 exports.getCart = async (req, res, next) => {
     try {
-        await req.user.populate('cart.items.productId');
-        const cartItems = req.user.cart.items.map((i) => {
+        const userId = req.params.userId || req.user._id;
+        const user = await User.findById(userId).populate('cart.items.productId');
+
+        if (!user) {
+            const error = new Error('User not found!');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const cartItems = user.cart.items.map((i) => {
             return {
                 product: { ...i.productId._doc },
                 quantity: i.quantity,
+                dateAdded: i.dateAdded,
+                updatedDate: i.updatedDate,
             };
         });
 
         const { totalPrice, totalQuantity, formattedPrice } = calculateTotals(cartItems);
 
-        const appliedDiscount = req.user.cart.appliedDiscount;
+        const appliedDiscount = user.cart.appliedDiscount;
         let discountedPrice = null;
         let formattedDiscountedPrice = null;
         let discountAmount = null;
@@ -110,6 +121,8 @@ exports.updatingCartProductQuantity = async (req, res, next) => {
             return {
                 product: { ...i.productId._doc },
                 quantity: i.quantity,
+                dateAdded: i.dateAdded,
+                updatedDate: i.updatedDate,
             };
         });
 
@@ -146,6 +159,8 @@ exports.deleteProductFromCart = async (req, res, next) => {
             return {
                 product: { ...i.productId._doc },
                 quantity: i.quantity,
+                dateAdded: i.dateAdded,
+                updatedDate: i.updatedDate,
             };
         });
 

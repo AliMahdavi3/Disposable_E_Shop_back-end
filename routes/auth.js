@@ -26,14 +26,15 @@ router.post('/reset-password', [
 ], authController.resetPassword);
 
 router.get('/users', authenticate, authController.getAllUsers);
+router.get('/user-count', authenticate, authController.getUsersCount);
 router.post('/user/favorites', authenticate, authController.addToFavorites);
 router.get('/user/favorites', authenticate, authController.getFavorites);
 router.delete('/user/favorites/:productId', authenticate, authController.removeFromFavorites);
-router.get('/user/:userId?', authenticate, authController.getUser);
 router.put('/user/:userId', authenticate, authController.editUser);
 router.delete('/user/:userId', authenticate, authController.deleteUser);
-
 router.put('/changePassword/:userId', authenticate, authController.changePassword)
+router.get('/user/:userId?', authenticate, authController.getUser);
+
 
 
 module.exports = router;
